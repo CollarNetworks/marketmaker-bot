@@ -1,5 +1,6 @@
 require('dotenv').config()
-
+const jwt = require('jsonwebtoken')
+const ethers = require('ethers')
 // Load configuration from environment variables
 const API_BASE_URL = process.env.API_BASE_URL
 const PROVIDER_ADDRESS = process.env.ADDRESS
@@ -26,14 +27,27 @@ async function getCallstrikeByTerms(terms) {
     return 11000 // Example callstrike value
 }
 
+async function signAndGetTokenForAuth() {
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY)
+    const signature = await wallet.signMessage(LOG_IN_MESSAGE);
+    const payload = {
+        address: PROVIDER_ADDRESS,
+        signature,
+    }
+    return jwt.sign(payload, process.env.JWT_SECRET)
+}
+
 async function createCallstrikeProposal(offerRequestId, callstrike) {
     const deadline = new Date()
     deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
+    const token = await signAndGetTokenForAuth()
+    console.log({ token })
     const response = await fetch(
         `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
         {
             method: 'POST',
             headers: {
+                Authorization: `MMBOTBearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -55,11 +69,14 @@ async function executeOnchainOffer(offerRequestId) {
 }
 
 async function markProposalAsExecuted(proposalId, onchainOfferId) {
+    const token = await signAndGetTokenForAuth()
+    console.log({ token })
     const response = await fetch(
         `${API_BASE_URL}/callstrikeProposal/${proposalId}/execute`,
         {
             method: 'PUT',
             headers: {
+                Authorization: `MMBOTBearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
