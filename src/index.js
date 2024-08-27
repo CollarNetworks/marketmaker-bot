@@ -1,13 +1,13 @@
 require('dotenv').config()
 const jwt = require('jsonwebtoken')
 const ethers = require('ethers')
+const { createOnchainOffer } = require('./adapters/collar')
 // Load configuration from environment variables
 const API_BASE_URL = process.env.API_BASE_URL
 const PROVIDER_ADDRESS = process.env.ADDRESS
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS) || 10000 // Default to 1 minute
 const DEADLINE_MINUTES = parseInt(process.env.DEADLINE_MINUTES) || 15 // Default to 15 minutes
-const LOG_IN_MESSAGE =
-    'I confirm that I am the sole owner of this wallet address and no other person or entity has access to it. Any transactions that take place under this account are my responsibility and not that of any other. By signing this, I agree to engage in the use of CollarNetworks Maerketmaker Bot and I understand that I am responsible for any losses that may occur as a result of my actions.'
+const LOG_IN_MESSAGE = "I confirm that I am the sole owner of this wallet address and no other person or entity has access to it. Any transactions that take place under this account are my responsibility and not that of any other. By signing this, I agree to engage in the use of CollarNetworks Marketmaker Bot and I understand that I am responsible for any losses that may occur as a result of my actions."
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
     console.error(
         'API_BASE_URL and PROVIDER_ADDRESS must be set in the environment variables'
@@ -34,14 +34,13 @@ async function signAndGetTokenForAuth() {
         address: PROVIDER_ADDRESS,
         signature,
     }
-    return jwt.sign(payload, process.env.JWT_SECRET)
+    return jwt.sign(payload, process.env.JWT_SECRET, { algorithm: 'RS256' })
 }
 
 async function createCallstrikeProposal(offerRequestId, callstrike) {
     const deadline = new Date()
     deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
     const token = await signAndGetTokenForAuth()
-    console.log({ token })
     const response = await fetch(
         `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
         {
@@ -62,15 +61,21 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
     return await response.json()
 }
 
-async function executeOnchainOffer(offerRequestId) {
-    // Implement the logic to execute onchain offer
-    // This is a placeholder implementation
-    return 0
+async function executeOnchainOffer(callstrike, ltv, amount, duration, providerNFTContractAddress) {
+
+    const offerId = await createOnchainOffer(
+        callstrike,
+        ltv,
+        amount,
+        duration,
+        providerNFTContractAddress,
+        process.env.RPC_URL // change to rpc url from deployment data
+    )
+    return offerId
 }
 
 async function markProposalAsExecuted(proposalId, onchainOfferId) {
     const token = await signAndGetTokenForAuth()
-    console.log({ token })
     const response = await fetch(
         `${API_BASE_URL}/callstrikeProposal/${proposalId}/execute`,
         {
@@ -85,9 +90,7 @@ async function markProposalAsExecuted(proposalId, onchainOfferId) {
             }),
         }
     )
-    console.log({ response })
     const data = await response.json()
-    console.log({ data, status: response.status })
     if (!data.success) {
         throw new Error(data.error)
     }
@@ -130,8 +133,15 @@ async function processOfferRequests() {
             } else if (offer.status === 'accepted') {
                 const acceptedProposal = getAcceptedProposalFromProvider(offer)
                 if (acceptedProposal) {
-                    const onchainId = await executeOnchainOffer(offer.id)
-                    await markProposalAsExecuted(acceptedProposal.id, onchainId)
+
+                    const onchainId = await executeOnchainOffer(
+                        acceptedProposal.callstrike,
+                        offer.ltv,
+                        offer.collateral_amount,
+                        offer.duration,
+                        offer.providerNFTAddress || "0x6A20EB0D3e8cC89FBC809aD04eB8529C2Ef60bd6" // get from deployment data by asset pair 
+                    )
+                    await markProposalAsExecuted(acceptedProposal.id, Number(onchainId))
                     console.log(
                         `Executed onchain offer for request ${offer.id}, execution ID: ${onchainId}`
                     )
@@ -159,3 +169,6 @@ process.on('SIGINT', () => {
     console.log('Received SIGINT. Shutting down gracefully.')
     process.exit(0)
 })
+
+
+
