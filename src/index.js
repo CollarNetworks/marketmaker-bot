@@ -74,7 +74,7 @@ async function executeOnchainOffer(callstrike, ltv, amount, duration, providerNF
     return offerId
 }
 
-async function markProposalAsExecuted(proposalId, onchainOfferId) {
+async function markProposalAsExecuted(proposalId, onchainOfferId, providerNFTAddress) {
     const token = await signAndGetTokenForAuth()
     const response = await fetch(
         `${API_BASE_URL}/callstrikeProposal/${proposalId}/execute`,
@@ -85,7 +85,7 @@ async function markProposalAsExecuted(proposalId, onchainOfferId) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                providerNFTAddress: '0x6A20EB0D3e8cC89FBC809aD04eB8529C2Ef60bd6',
+                providerNFTAddress,
                 onchainOfferId,
             }),
         }
@@ -133,15 +133,15 @@ async function processOfferRequests() {
             } else if (offer.status === 'accepted') {
                 const acceptedProposal = getAcceptedProposalFromProvider(offer)
                 if (acceptedProposal) {
-
+                    const providerNFTAddress = "0x6A20EB0D3e8cC89FBC809aD04eB8529C2Ef60bd6" // get from deployment data by asset pair 
                     const onchainId = await executeOnchainOffer(
                         acceptedProposal.callstrike,
                         offer.ltv,
                         offer.collateral_amount,
                         offer.duration,
-                        offer.providerNFTAddress || "0x6A20EB0D3e8cC89FBC809aD04eB8529C2Ef60bd6" // get from deployment data by asset pair 
+                        providerNFTAddress
                     )
-                    await markProposalAsExecuted(acceptedProposal.id, Number(onchainId))
+                    await markProposalAsExecuted(acceptedProposal.id, Number(onchainId), providerNFTAddress)
                     console.log(
                         `Executed onchain offer for request ${offer.id}, execution ID: ${onchainId}`
                     )
