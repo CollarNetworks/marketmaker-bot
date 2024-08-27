@@ -1,13 +1,8 @@
 require('dotenv').config()
-const jwt = require('jsonwebtoken')
-const ethers = require('ethers')
-const { createOnchainOffer } = require('./adapters/collar')
-// Load configuration from environment variables
-const API_BASE_URL = process.env.API_BASE_URL
-const PROVIDER_ADDRESS = process.env.ADDRESS
-const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS) || 10000 // Default to 1 minute
-const DEADLINE_MINUTES = parseInt(process.env.DEADLINE_MINUTES) || 15 // Default to 15 minutes
-const LOG_IN_MESSAGE = "I confirm that I am the sole owner of this wallet address and no other person or entity has access to it. Any transactions that take place under this account are my responsibility and not that of any other. By signing this, I agree to engage in the use of CollarNetworks Marketmaker Bot and I understand that I am responsible for any losses that may occur as a result of my actions."
+const { createOnchainOffer } = require('./adapters/collarProtocol')
+const { fetchOfferRequests, markProposalAsExecuted, createCallstrikeProposal } = require('./adapters/collarAPI')
+const { API_BASE_URL, PROVIDER_ADDRESS, POLL_INTERVAL_MS, RPC_URL } = require('./constants')
+
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
     console.error(
         'API_BASE_URL and PROVIDER_ADDRESS must be set in the environment variables'
@@ -15,51 +10,13 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
     process.exit(1)
 }
 
-async function fetchOfferRequests() {
-    const response = await fetch(`${API_BASE_URL}/offerRequest?limit=1000`)
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-    return await response.json()
-}
 
 async function getCallstrikeByTerms(terms) {
-    // Implement the logic to get callstrike by terms
+    // Implement the logic to get callstrike by terms by config callback 
     // This is a placeholder implementation
     return 11000 // Example callstrike value
 }
 
-async function signAndGetTokenForAuth() {
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY)
-    const signature = await wallet.signMessage(LOG_IN_MESSAGE);
-    const payload = {
-        address: PROVIDER_ADDRESS,
-        signature,
-    }
-    return jwt.sign(payload, process.env.JWT_SECRET, { algorithm: 'RS256' })
-}
-
-async function createCallstrikeProposal(offerRequestId, callstrike) {
-    const deadline = new Date()
-    deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
-    const token = await signAndGetTokenForAuth()
-    const response = await fetch(
-        `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
-        {
-            method: 'POST',
-            headers: {
-                Authorization: `MMBOTBearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                address: PROVIDER_ADDRESS,
-                callstrike,
-                deadline,
-                offerRequestId,
-            }),
-        }
-    )
-
-    return await response.json()
-}
 
 async function executeOnchainOffer(callstrike, ltv, amount, duration, providerNFTContractAddress) {
 
@@ -69,32 +26,9 @@ async function executeOnchainOffer(callstrike, ltv, amount, duration, providerNF
         amount,
         duration,
         providerNFTContractAddress,
-        process.env.RPC_URL // change to rpc url from deployment data
+        RPC_URL // change to rpc url from deployment data
     )
     return offerId
-}
-
-async function markProposalAsExecuted(proposalId, onchainOfferId, providerNFTAddress) {
-    const token = await signAndGetTokenForAuth()
-    const response = await fetch(
-        `${API_BASE_URL}/callstrikeProposal/${proposalId}/execute`,
-        {
-            method: 'PUT',
-            headers: {
-                Authorization: `MMBOTBearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                providerNFTAddress,
-                onchainOfferId,
-            }),
-        }
-    )
-    const data = await response.json()
-    if (!data.success) {
-        throw new Error(data.error)
-    }
-    return data
 }
 
 function getAcceptedProposalFromProvider(offer) {
@@ -118,7 +52,7 @@ async function processOfferRequests() {
     for (const offer of offerRequests) {
         try {
             if (offer.status === 'open') {
-                const callstrike = await getCallstrikeByTerms(offer)
+                const callstrike = await getCallstrikeByTerms(offer) // here's where the configurable callback logic would come in 
                 const providerProposals = getProposalsByProvider(offer)
                 if (providerProposals.length > 0) {
                     console.log(

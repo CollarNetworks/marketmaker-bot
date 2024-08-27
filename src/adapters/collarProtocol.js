@@ -20,14 +20,14 @@ async function parseReceipt(receipt, contract) {
 async function createOnchainOffer(callstrike, ltv, amount, duration, providerNFTContractAddress, rpcUrl) {
     const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY);
     const providerContract = await getContractInstance(
-        rpcUrl || process.env.RPC_URL,
+        rpcUrl,
         providerNFTContractAddress,
         PROVIDER_NFT_ABI,
         wallet
     );
     const cashAsset = await providerContract.cashAsset();
     const cashAssetContract = await getContractInstance(
-        rpcUrl || process.env.RPC_URL,
+        rpcUrl,
         cashAsset,
         ERCC20_ABI,
         wallet
