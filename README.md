@@ -1,7 +1,5 @@
 # Collar networks market maker BOT utility
 
----
-
 ## Setup and run
 
 - Ensure necessary pre-requisites are installed on system:
@@ -48,3 +46,11 @@ This will install PM2 to run your bot continuously even when you close your conn
 
 - Run your bot in cluster mode with PM2
   `pnpm runbot`
+
+- Set bot to automatically start on reboot
+  `pm2 startup`
+
+- Copy code generated at the bottom of the screen and run the command.
+
+- Save this process list to be the one started up on reboots
+  `pm2 save`

@@ -56,8 +56,6 @@ function getProposalsByProvider(offer) {
 }
 
 async function processOfferRequests() {
-  console.log('Processing offer requests...')
-
   const response = await fetchOfferRequests()
   const offerRequests = response.data.offerRequests
 
@@ -67,9 +65,6 @@ async function processOfferRequests() {
         const callstrike = await getCallstrikeByTerms(offer) // here's where the configurable callback logic would come in
         const providerProposals = getProposalsByProvider(offer)
         if (providerProposals.length > 0) {
-          console.log(
-            `Provider already has proposals for offer request ${offer.id}`
-          )
           continue
         }
         const proposal = await createCallstrikeProposal(offer.id, callstrike)
@@ -108,7 +103,6 @@ async function processOfferRequests() {
       console.error(`Error during processing:${offer.id}`, error)
     }
   }
-  console.log('Processing complete.')
 
   // Schedule the next processing cycle
   setTimeout(processOfferRequests, POLL_INTERVAL_MS)
