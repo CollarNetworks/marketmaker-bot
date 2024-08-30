@@ -1,4 +1,3 @@
-
 export default [
   {
     files: ['**/*.js'],
@@ -8,6 +7,5 @@ export default [
       eqeqeq: 'warn',
       'no-unneeded-ternary': 'error',
     },
-
   },
 ]
