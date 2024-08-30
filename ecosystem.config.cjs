@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'mmbot',
       script: 'pnpm',
-      args: 'runbot',
+      args: 'start',
       instances: 1,
       port: 3005,
       max_memory_restart: '500M',
