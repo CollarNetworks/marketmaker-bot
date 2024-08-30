@@ -1,8 +1,8 @@
-#Collar networks market maker BOT utility
+# Collar networks market maker BOT utility
 
 ---
 
-##Setup and run
+## Setup and run
 
 - Ensure necessary pre-requisites are installed on system:
   `sudo apt-get install git curl`
