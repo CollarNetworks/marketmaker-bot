@@ -30,7 +30,7 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
             method: 'POST',
             headers: {
                 Authorization: `MMBOTBearer ${token}`,
-                "Chain-Id": 421614,
+                "Chain-Id": process.env.CHAIN_ID,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -54,7 +54,7 @@ async function markProposalAsExecuted(proposalId, onchainOfferId, providerNFTAdd
             method: 'PUT',
             headers: {
                 Authorization: `MMBOTBearer ${token}`,
-                "Chain-Id": 421614,
+                "Chain-Id": process.env.CHAIN_ID,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
