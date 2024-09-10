@@ -14,6 +14,7 @@ async function signAndGetTokenForAuth() {
     const payload = {
         address: PROVIDER_ADDRESS,
         signature,
+
     }
     return jwt.sign(payload, process.env.JWT_SECRET, { algorithm: 'RS256' })
 }
@@ -29,6 +30,7 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
             method: 'POST',
             headers: {
                 Authorization: `MMBOTBearer ${token}`,
+                "Chain-Id": process.env.CHAIN_ID,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -52,6 +54,7 @@ async function markProposalAsExecuted(proposalId, onchainOfferId, providerNFTAdd
             method: 'PUT',
             headers: {
                 Authorization: `MMBOTBearer ${token}`,
+                "Chain-Id": process.env.CHAIN_ID,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
