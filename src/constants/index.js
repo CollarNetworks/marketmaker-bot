@@ -14,4 +14,5 @@ module.exports = {
   POLL_INTERVAL_MS,
   DEADLINE_MINUTES,
   LOG_IN_MESSAGE,
+  MAX_RETRIES,
 }
