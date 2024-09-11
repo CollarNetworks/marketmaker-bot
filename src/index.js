@@ -70,7 +70,7 @@ async function processOfferRequests() {
           providerProposals.length > 0 ||
           (tries[offer.id] !== undefined && tries[offer.id] >= 2)
         ) {
-          console.log('skipping')
+          // skip these as they failed twice already
           continue
         }
         try {
