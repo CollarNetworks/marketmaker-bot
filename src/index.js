@@ -10,6 +10,7 @@ const {
   PROVIDER_ADDRESS,
   POLL_INTERVAL_MS,
   RPC_URL,
+  MAX_RETRIES,
 } = require('./constants')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
@@ -68,7 +69,7 @@ async function processOfferRequests() {
         const providerProposals = getProposalsByProvider(offer)
         if (
           providerProposals.length > 0 ||
-          (tries[offer.id] !== undefined && tries[offer.id] >= 2)
+          (tries[offer.id] !== undefined && tries[offer.id] >= MAX_RETRIES)
         ) {
           // skip these as they failed twice already
           continue
