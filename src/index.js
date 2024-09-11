@@ -81,6 +81,7 @@ async function processOfferRequests() {
             `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
           )
         } catch (error) {
+          console.log('error', error)
           tries[offer.id] = tries[offer.id] ? tries[offer.id] + 1 : 1
           continue
         }

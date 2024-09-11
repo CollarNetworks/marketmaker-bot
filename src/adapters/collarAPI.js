@@ -27,33 +27,27 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
   const deadline = new Date()
   deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
   const token = await signAndGetTokenForAuth()
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `MMBOTBearer ${token}`,
-          'Chain-Id': process.env.CHAIN_ID,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: PROVIDER_ADDRESS,
-          callstrike,
-          deadline,
-          offerRequestId,
-        }),
-      }
-    )
-    console.log(response)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+  const response = await fetch(
+    `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        'Chain-Id': process.env.CHAIN_ID,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        address: PROVIDER_ADDRESS,
+        callstrike,
+        deadline,
+        offerRequestId,
+      }),
     }
-    return await response.json()
-  } catch (error) {
-    console.error(error)
-    throw new Error('Error creating callstrike proposal')
+  )
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
   }
+  return await response.json()
 }
 
 async function markProposalAsExecuted(
