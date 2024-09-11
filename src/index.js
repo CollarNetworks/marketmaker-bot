@@ -19,6 +19,8 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
   process.exit(1)
 }
 
+const tries = {}
+
 async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
@@ -64,13 +66,23 @@ async function processOfferRequests() {
       if (offer.status === 'open') {
         const callstrike = await getCallstrikeByTerms(offer) // here's where the configurable callback logic would come in
         const providerProposals = getProposalsByProvider(offer)
-        if (providerProposals.length > 0) {
+        if (
+          providerProposals.length > 0 ||
+          (tries[offer.id] !== undefined && tries[offer.id] >= 2)
+        ) {
+          // skip these as they failed twice already
           continue
         }
-        const proposal = await createCallstrikeProposal(offer.id, callstrike)
-        console.log(
-          `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
-        )
+        try {
+          const proposal = await createCallstrikeProposal(offer.id, callstrike)
+          console.log(
+            `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
+          )
+        } catch (error) {
+          console.log('error', error)
+          tries[offer.id] = tries[offer.id] + 1 || 1
+          continue
+        }
       } else if (offer.status === 'accepted') {
         const acceptedProposal = getAcceptedProposalFromProvider(offer)
         if (offer.ltv < 100) {
