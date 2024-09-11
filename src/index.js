@@ -75,6 +75,7 @@ async function processOfferRequests() {
           continue
         }
         try {
+          console.log(tries)
           const proposal = await createCallstrikeProposal(offer.id, callstrike)
           console.log(
             `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
