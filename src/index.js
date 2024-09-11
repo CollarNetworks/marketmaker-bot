@@ -59,18 +59,29 @@ async function processOfferRequests() {
   const response = await fetchOfferRequests()
   const offerRequests = response.data.offerRequests
 
+  const tries = {}
+
   for (const offer of offerRequests) {
     try {
       if (offer.status === 'open') {
         const callstrike = await getCallstrikeByTerms(offer) // here's where the configurable callback logic would come in
         const providerProposals = getProposalsByProvider(offer)
-        if (providerProposals.length > 0) {
+        if (
+          providerProposals.length > 0 &&
+          tries[offer.id] !== undefined &&
+          tries[offer.id] < 3
+        ) {
           continue
         }
-        const proposal = await createCallstrikeProposal(offer.id, callstrike)
-        console.log(
-          `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
-        )
+        try {
+          const proposal = await createCallstrikeProposal(offer.id, callstrike)
+          console.log(
+            `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
+          )
+        } catch (error) {
+          tries[offer.id] = tries[offer.id] ? tries[offer.id] + 1 : 1
+          continue
+        }
       } else if (offer.status === 'accepted') {
         const acceptedProposal = getAcceptedProposalFromProvider(offer)
         if (offer.ltv < 100) {
