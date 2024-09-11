@@ -27,7 +27,6 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
   const deadline = new Date()
   deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
   const token = await signAndGetTokenForAuth()
-  console.log({ token })
   try {
     const response = await fetch(
       `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
@@ -46,6 +45,7 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
         }),
       }
     )
+    console.log(response)
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }

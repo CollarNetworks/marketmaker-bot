@@ -71,6 +71,7 @@ async function processOfferRequests() {
           tries[offer.id] !== undefined &&
           tries[offer.id] < 3
         ) {
+          console.log('skipping')
           continue
         }
         try {
