@@ -78,8 +78,15 @@ async function markProposalAsExecuted(
   return data
 }
 
+async function fetchAcceptedRollOfferProposals(providerAddress) {
+  const response = await fetch(`${API_BASE_URL}/rollOfferProposal/accepted/${providerAddress}?limit=1000`)
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+  return await response.json()
+}
+
 module.exports = {
   fetchOfferRequests,
   createCallstrikeProposal,
   markProposalAsExecuted,
+  fetchAcceptedRollOfferProposals
 }

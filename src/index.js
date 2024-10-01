@@ -1,9 +1,10 @@
 require('dotenv').config()
-const { createOnchainOffer } = require('./adapters/collarProtocol')
+const { createOnchainOffer, createOnchainRollOffer } = require('./adapters/collarProtocol')
 const {
   fetchOfferRequests,
   markProposalAsExecuted,
   createCallstrikeProposal,
+  fetchAcceptedRollOfferProposals,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -117,12 +118,34 @@ async function processOfferRequests() {
     }
   }
 
+
+}
+
+async function processRollOfferProposals() {
+  const response = await fetchAcceptedRollOfferProposals(PROVIDER_ADDRESS)
+  console.log({ data: response.data })
+  const proposals = response.data.proposals
+  console.log({ proposals, proposal: proposals[0] })
+  for (proposal of proposals) {
+    if (proposal.status === 'accepted') {
+      // execute roll offer on chain with the proposal terms
+      if (new Date(proposal.deadline) > new Date()) {
+        const onchainRollOffer = await createOnchainRollOffer(proposal, RPC_URL)
+        console.log({ onchainRollOffer })
+      }
+    }
+  }
+}
+
+async function poll() {
+  // await processOfferRequests();
+  await processRollOfferProposals()
   // Schedule the next processing cycle
-  setTimeout(processOfferRequests, POLL_INTERVAL_MS)
+  setTimeout(poll, POLL_INTERVAL_MS)
 }
 
 // Start the processing cycle
-processOfferRequests()
+poll()
 
 console.log(
   `Offer request processor running. Processing every ${POLL_INTERVAL_MS}ms. Press Ctrl+C to stop.`
