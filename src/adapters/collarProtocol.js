@@ -69,6 +69,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
     try {
         console.log("creating roll offer")
         // Get wallet instance
+        // const rpcUrl = 'https://virtual.arbitrum-sepolia.rpc.tenderly.co/aae1ab80-fdc7-46d1-a9ba-3ce19afb5125'
         const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY);
         // Get contract instance
         const rollsContract = await getContractInstance(
@@ -125,8 +126,14 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
         // Wait for the transaction to be mined
         const receipt = await tx.wait();
         console.log({ receipt })
-        // Return the transaction receipt
-        return receipt;
+
+        const events = await parseReceipt(receipt, rollsContract);
+        const offerCreatedEvent = events.find(event => event.name === "OfferCreated");
+        if (!offerCreatedEvent) {
+            throw new Error("OfferCreated event not found in the transaction receipt)")
+        }
+        const rollId = offerCreatedEvent.args.rollId;
+        return rollId
     } catch (error) {
         console.error('Error creating roll offer on-chain:', error);
         throw error;

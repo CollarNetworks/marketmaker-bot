@@ -5,6 +5,7 @@ const {
   markProposalAsExecuted,
   createCallstrikeProposal,
   fetchAcceptedRollOfferProposals,
+  markRollOfferProposalAsExecuted,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -22,6 +23,7 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
 }
 
 const tries = {}
+const rollTries = {}
 
 async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
@@ -130,8 +132,24 @@ async function processRollOfferProposals() {
     if (proposal.status === 'accepted') {
       // execute roll offer on chain with the proposal terms
       if (new Date(proposal.deadline) > new Date()) {
-        const onchainRollOffer = await createOnchainRollOffer(proposal, RPC_URL)
-        console.log({ onchainRollOffer })
+        try {
+          if (
+            (rollTries[proposal.id] !== undefined && rollTries[proposal.id] >= MAX_RETRIES)
+          ) {
+            // skip these as they failed twice already
+            continue
+          }
+          const onchainRollOffer = await createOnchainRollOffer(proposal, RPC_URL)
+          console.log({ onchainRollOffer })
+          await markRollOfferProposalAsExecuted(proposal.id, Number(onchainRollOffer))
+          console.log(
+            `Executed onchain roll offer for position ${proposal.taker_id} on loans contract : ${proposal.loans_contract_address}, execution ID: ${onchainRollOffer}`
+          )
+        } catch (e) {
+          console.log('error', e)
+          rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
+          continue
+        }
       }
     }
   }
