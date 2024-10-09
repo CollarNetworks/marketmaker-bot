@@ -67,7 +67,6 @@ async function createOnchainOffer(callstrike, ltv, amount, duration, providerNFT
 
 async function createOnchainRollOffer(proposal, rpcUrl) {
     try {
-        console.log("creating roll offer")
         // Get wallet instance
         // const rpcUrl = 'https://virtual.arbitrum-sepolia.rpc.tenderly.co/aae1ab80-fdc7-46d1-a9ba-3ce19afb5125'
         const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY);
@@ -91,7 +90,6 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
         const deadlineDate = new Date();
         deadlineDate.setMinutes(deadlineDate.getMinutes() + DEADLINE_MINUTES);
         const deadline = Math.ceil(deadlineDate.getTime() / 1000)
-        console.log({ deadline, time: deadlineDate.getTime() })
 
         // get providerNFT address and id 
         const takerNFTContractAddress = await getTakerNFTContractAddressByLoansContractAddress(rpcUrl, proposal.loans_contract_address);
@@ -103,7 +101,6 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
         )
         const [providerNFTContractAddress, providerNFTId] = await takerContract.getPosition(taker_id);
         // approve provider id to rolls 
-        console.log({ providerNFTContractAddress, providerNFTId })
         const providerNFTContract = await getContractInstance(
             rpcUrl,
             providerNFTContractAddress,
@@ -125,7 +122,6 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
 
         // Wait for the transaction to be mined
         const receipt = await tx.wait();
-        console.log({ receipt })
 
         const events = await parseReceipt(receipt, rollsContract);
         const offerCreatedEvent = events.find(event => event.name === "OfferCreated");

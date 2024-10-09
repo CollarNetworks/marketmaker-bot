@@ -125,9 +125,7 @@ async function processOfferRequests() {
 
 async function processRollOfferProposals() {
   const response = await fetchAcceptedRollOfferProposals(PROVIDER_ADDRESS)
-  console.log({ data: response.data })
   const proposals = response.data.proposals
-  console.log({ proposals, proposal: proposals[0] })
   for (proposal of proposals) {
     if (proposal.status === 'accepted') {
       // execute roll offer on chain with the proposal terms
@@ -140,7 +138,6 @@ async function processRollOfferProposals() {
             continue
           }
           const onchainRollOffer = await createOnchainRollOffer(proposal, RPC_URL)
-          console.log({ onchainRollOffer })
           await markRollOfferProposalAsExecuted(proposal.id, Number(onchainRollOffer))
           console.log(
             `Executed onchain roll offer for position ${proposal.taker_id} on loans contract : ${proposal.loans_contract_address}, execution ID: ${onchainRollOffer}`

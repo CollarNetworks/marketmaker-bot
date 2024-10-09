@@ -27,7 +27,6 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
   const deadline = new Date()
   deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
   const token = await signAndGetTokenForAuth()
-  console.log({ token })
 
   const response = await fetch(
     `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
@@ -58,7 +57,6 @@ async function markProposalAsExecuted(
   providerNFTAddress
 ) {
   const token = await signAndGetTokenForAuth()
-  console.log({ token })
   const response = await fetch(
     `${API_BASE_URL}/callstrikeProposal/${proposalId}/execute`,
     {
@@ -86,7 +84,6 @@ async function markRollOfferProposalAsExecuted(
   onchainOfferId,
 ) {
   const token = await signAndGetTokenForAuth()
-  console.log({ token })
   const response = await fetch(
     `${API_BASE_URL}/rollOfferProposal/${proposalId}/execute`,
     {
@@ -102,7 +99,6 @@ async function markRollOfferProposalAsExecuted(
     }
   )
   const data = await response.json()
-  console.log({ data })
   if (!data.success) {
     throw new Error(data.error)
   }
