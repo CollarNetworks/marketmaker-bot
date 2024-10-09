@@ -27,6 +27,7 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
   const deadline = new Date()
   deadline.setMinutes(deadline.getMinutes() + DEADLINE_MINUTES)
   const token = await signAndGetTokenForAuth()
+
   const response = await fetch(
     `${API_BASE_URL}/callstrikeProposal/${offerRequestId}`,
     {
@@ -78,8 +79,42 @@ async function markProposalAsExecuted(
   return data
 }
 
+async function markRollOfferProposalAsExecuted(
+  proposalId,
+  onchainOfferId,
+) {
+  const token = await signAndGetTokenForAuth()
+  const response = await fetch(
+    `${API_BASE_URL}/rollOfferProposal/${proposalId}/execute`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        'Chain-Id': process.env.CHAIN_ID,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        onchainOfferId,
+      }),
+    }
+  )
+  const data = await response.json()
+  if (!data.success) {
+    throw new Error(data.error)
+  }
+  return data
+}
+
+async function fetchAcceptedRollOfferProposals(providerAddress) {
+  const response = await fetch(`${API_BASE_URL}/rollOfferProposal/accepted/${providerAddress}?limit=1000`)
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+  return await response.json()
+}
+
 module.exports = {
   fetchOfferRequests,
   createCallstrikeProposal,
   markProposalAsExecuted,
+  markRollOfferProposalAsExecuted,
+  fetchAcceptedRollOfferProposals
 }

@@ -1,9 +1,11 @@
 require('dotenv').config()
-const { createOnchainOffer } = require('./adapters/collarProtocol')
+const { createOnchainOffer, createOnchainRollOffer } = require('./adapters/collarProtocol')
 const {
   fetchOfferRequests,
   markProposalAsExecuted,
   createCallstrikeProposal,
+  fetchAcceptedRollOfferProposals,
+  markRollOfferProposalAsExecuted,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -21,6 +23,7 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
 }
 
 const tries = {}
+const rollTries = {}
 
 async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
@@ -117,12 +120,47 @@ async function processOfferRequests() {
     }
   }
 
+
+}
+
+async function processRollOfferProposals() {
+  const response = await fetchAcceptedRollOfferProposals(PROVIDER_ADDRESS)
+  const proposals = response.data.proposals
+  for (proposal of proposals) {
+    if (proposal.status === 'accepted') {
+      // execute roll offer on chain with the proposal terms
+      if (new Date(proposal.deadline) > new Date()) {
+        try {
+          if (
+            (rollTries[proposal.id] !== undefined && rollTries[proposal.id] >= MAX_RETRIES)
+          ) {
+            // skip these as they failed twice already
+            continue
+          }
+          const onchainRollOffer = await createOnchainRollOffer(proposal, RPC_URL)
+          await markRollOfferProposalAsExecuted(proposal.id, Number(onchainRollOffer))
+          console.log(
+            `Executed onchain roll offer for position ${proposal.taker_id} on loans contract : ${proposal.loans_contract_address}, execution ID: ${onchainRollOffer}`
+          )
+        } catch (e) {
+          console.log('error', e)
+          rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
+          continue
+        }
+      }
+    }
+  }
+}
+
+async function poll() {
+  // await processOfferRequests();
+  await processRollOfferProposals()
   // Schedule the next processing cycle
-  setTimeout(processOfferRequests, POLL_INTERVAL_MS)
+  setTimeout(poll, POLL_INTERVAL_MS)
 }
 
 // Start the processing cycle
-processOfferRequests()
+poll()
 
 console.log(
   `Offer request processor running. Processing every ${POLL_INTERVAL_MS}ms. Press Ctrl+C to stop.`
