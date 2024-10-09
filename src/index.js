@@ -7,7 +7,7 @@ const {
 const {
   fetchOfferRequests,
   markProposalAsExecuted,
-
+  createCallstrikeProposal,
   fetchAcceptedRollOfferProposals,
   markRollOfferProposalAsExecuted,
 } = require('./adapters/collarAPI')
