@@ -15,4 +15,5 @@ module.exports = {
   DEADLINE_MINUTES,
   LOG_IN_MESSAGE,
   MAX_RETRIES,
+  BIPS_BASE: 10_000,
 }

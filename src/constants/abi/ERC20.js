@@ -1,4 +1,4 @@
-const ERCC20_ABI = [
+const ERC20_ABI = [
     {
         inputs: [
             { internalType: 'address', name: '_initialOwner', type: 'address' },
@@ -224,4 +224,4 @@ const ERCC20_ABI = [
     },
 ]
 
-module.exports = ERCC20_ABI
+module.exports = ERC20_ABI
