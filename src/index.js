@@ -1,9 +1,13 @@
 require('dotenv').config()
-const { createOnchainOffer, createOnchainRollOffer } = require('./adapters/collarProtocol')
+const {
+  createOnchainOffer,
+  createOnchainRollOffer,
+  getProviderLockedCashFromOracleAndTerms,
+} = require('./adapters/collarProtocol')
 const {
   fetchOfferRequests,
   markProposalAsExecuted,
-  createCallstrikeProposal,
+
   fetchAcceptedRollOfferProposals,
   markRollOfferProposalAsExecuted,
 } = require('./adapters/collarAPI')
@@ -36,12 +40,18 @@ async function executeOnchainOffer(
   ltv,
   amount,
   duration,
-  providerNFTContractAddress
+  providerNFTContractAddress,
+  oracleAddress
 ) {
+  const cashAmount = await getProviderLockedCashFromOracleAndTerms(
+    oracleAddress,
+    amount,
+    callstrike
+  )
   const offerId = await createOnchainOffer(
     callstrike,
     ltv,
-    amount,
+    cashAmount,
     duration,
     providerNFTContractAddress,
     RPC_URL // change to rpc url from deployment data
@@ -78,9 +88,10 @@ async function processOfferRequests() {
           continue
         }
         try {
-          const proposal = await createCallstrikeProposal(offer.id, callstrike)
+          const response = await createCallstrikeProposal(offer.id, callstrike)
+          const proposal = response.data
           console.log(
-            `Created proposal for offer request ${offer.id} with callstrike ${callstrike}`
+            `Created proposal for offer request ${offer.id} with callstrike ${callstrike} proposal id ${proposal.id}`
           )
         } catch (error) {
           console.log('error', error)
@@ -97,13 +108,15 @@ async function processOfferRequests() {
         }
         if (acceptedProposal) {
           const providerNFTAddress =
-            '0x6A20EB0D3e8cC89FBC809aD04eB8529C2Ef60bd6' // get from deployment data by asset pair
+            acceptedProposal.provider_nft_contract_address
+          const oracleAddress = acceptedProposal.oracle_contract_address
           const onchainId = await executeOnchainOffer(
             acceptedProposal.callstrike,
             offer.ltv,
             offer.collateral_amount,
             offer.duration,
-            providerNFTAddress
+            providerNFTAddress,
+            oracleAddress
           )
           await markProposalAsExecuted(
             acceptedProposal.id,
@@ -119,8 +132,6 @@ async function processOfferRequests() {
       console.error(`Error during processing:${offer.id}`, error)
     }
   }
-
-
 }
 
 async function processRollOfferProposals() {
@@ -132,13 +143,20 @@ async function processRollOfferProposals() {
       if (new Date(proposal.deadline) > new Date()) {
         try {
           if (
-            (rollTries[proposal.id] !== undefined && rollTries[proposal.id] >= MAX_RETRIES)
+            rollTries[proposal.id] !== undefined &&
+            rollTries[proposal.id] >= MAX_RETRIES
           ) {
             // skip these as they failed twice already
             continue
           }
-          const onchainRollOffer = await createOnchainRollOffer(proposal, RPC_URL)
-          await markRollOfferProposalAsExecuted(proposal.id, Number(onchainRollOffer))
+          const onchainRollOffer = await createOnchainRollOffer(
+            proposal,
+            RPC_URL
+          )
+          await markRollOfferProposalAsExecuted(
+            proposal.id,
+            Number(onchainRollOffer)
+          )
           console.log(
             `Executed onchain roll offer for position ${proposal.taker_id} on loans contract : ${proposal.loans_contract_address}, execution ID: ${onchainRollOffer}`
           )
@@ -153,7 +171,7 @@ async function processRollOfferProposals() {
 }
 
 async function poll() {
-  // await processOfferRequests();
+  await processOfferRequests()
   await processRollOfferProposals()
   // Schedule the next processing cycle
   setTimeout(poll, POLL_INTERVAL_MS)
