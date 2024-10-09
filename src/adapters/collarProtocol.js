@@ -1,12 +1,13 @@
 
 
-const { DEADLINE_MINUTES } = require("../constants");
-const ERCC20_ABI = require("../constants/abi/ERC20");
+const { DEADLINE_MINUTES, BIPS_BASE } = require("../constants");
+const ERC20_ABI = require("../constants/abi/ERC20");
 const { PROVIDER_NFT_ABI } = require("../constants/abi/ProviderNFT");
 const { TAKER_NFT_ABI } = require("../constants/abi/TakerNFT");
 const { ROLLS_ABI } = require("../constants/abi/Rolls");
 const { LOANS_ABI } = require("../constants/abi/Loans");
 const { getContractInstance, getWalletInstance } = require("./ethers");
+const { ORACLE_ABI } = require("../constants/abi/Oracle");
 async function parseReceipt(receipt, contract) {
     if (receipt.logs && receipt.logs.length > 0) {
         const parsedLogs = receipt.logs.map(log => {
@@ -35,7 +36,7 @@ async function createOnchainOffer(callstrike, ltv, amount, duration, providerNFT
     const cashAssetContract = await getContractInstance(
         rpcUrl,
         cashAsset,
-        ERCC20_ABI,
+        ERC20_ABI,
         wallet
     );
     const approvalTX = await cashAssetContract.approve(providerNFTContractAddress, amount);
@@ -45,8 +46,13 @@ async function createOnchainOffer(callstrike, ltv, amount, duration, providerNFT
         external
         returns (uint offerId);
      */
-
-    const takerNFT = await providerContract.collarTakerContract();
+    console.log({
+        cashAsset,
+        approvalTX,
+        providerNFTContractAddress,
+        amount,
+        callstrike, duration
+    })
     const tx = await providerContract.createOffer(
         callstrike,
         amount,
@@ -149,7 +155,38 @@ async function getTakerNFTContractAddressByLoansContractAddress(
     return takerNFTContractAddress
 }
 
+async function getProviderLockedCashFromOracleAndTerms(oracleAddress, collateralAmount, callstrike) {
+    // Get wallet instance
+    const wallet = await getWalletInstance(process.env.RPC_URL, process.env.PRIVATE_KEY);
+    // Get contract instance
+    const oracleContract = await getContractInstance(
+        process.env.RPC_URL,
+        oracleAddress,
+        ORACLE_ABI,
+        wallet
+    );
+    const price = await oracleContract.currentPrice();
+    const baseTokenAmount = await oracleContract.BASE_TOKEN_AMOUNT();
+    const baseTokenAddress = await oracleContract.baseToken();
+    const baseTokenContract = await getContractInstance(
+        process.env.RPC_URL,
+        baseTokenAddress,
+        ERC20_ABI,
+        wallet
+    );
+    const baseTokenDecimals = await baseTokenContract.decimals();
+    const baseTokenScale = 10n ** BigInt(baseTokenDecimals);
+    // calculate the amount of cash the collateral represents : price * collateralAmount * baseTokenDecimalsScale / baseTokenAmount * baseTokenDecimalsScale
+    const cashAmount = (BigInt(collateralAmount) * price * baseTokenScale) / (baseTokenAmount * baseTokenScale);
+    // get percentage of provider locked amount e.g.: if callstrike is 11000 (110%) then providerLockedPercentage = 0.1 
+    const providerLocked = cashAmount * (BigInt(callstrike) - BigInt(BIPS_BASE)) / BigInt(BIPS_BASE);
+    // calculate the amount of cash to be locked by the provider in the offer:  price of collateral in cash token * amount of collateral * providerLockedPercentage
+    console.log({ baseTokenAmount, baseTokenScale, price, collateralAmount, cashAmount, providerLocked })
+    return providerLocked;
+}
+
 module.exports = {
+    getProviderLockedCashFromOracleAndTerms,
     createOnchainOffer,
     createOnchainRollOffer
 }
