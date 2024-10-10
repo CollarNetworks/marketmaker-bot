@@ -13,7 +13,7 @@ async function fetchOfferRequests() {
   return await response.json()
 }
 
-async function signAndGetTokenForAuth() {
+export async function signAndGetTokenForAuth() {
   const wallet = await getWalletInstance(RPC_URL, process.env.PRIVATE_KEY)
   const signature = await wallet.signMessage(LOG_IN_MESSAGE)
   const payload = {
@@ -35,7 +35,7 @@ async function createCallstrikeProposal(offerRequestId, callstrike) {
       headers: {
         Authorization: `MMBOTBearer ${token}`,
         'Chain-Id': process.env.CHAIN_ID,
-        'Environment': process.env.API_ENVIRONMENT,
+        Environment: process.env.API_ENVIRONMENT,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -65,7 +65,7 @@ async function markProposalAsExecuted(
       headers: {
         Authorization: `MMBOTBearer ${token}`,
         'Chain-Id': process.env.CHAIN_ID,
-        'Environment': process.env.API_ENVIRONMENT,
+        Environment: process.env.API_ENVIRONMENT,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -81,10 +81,7 @@ async function markProposalAsExecuted(
   return data
 }
 
-async function markRollOfferProposalAsExecuted(
-  proposalId,
-  onchainOfferId,
-) {
+async function markRollOfferProposalAsExecuted(proposalId, onchainOfferId) {
   const token = await signAndGetTokenForAuth()
   const response = await fetch(
     `${API_BASE_URL}/rollOfferProposal/${proposalId}/execute`,
@@ -108,7 +105,9 @@ async function markRollOfferProposalAsExecuted(
 }
 
 async function fetchAcceptedRollOfferProposals(providerAddress) {
-  const response = await fetch(`${API_BASE_URL}/rollOfferProposal/accepted/${providerAddress}?limit=1000`)
+  const response = await fetch(
+    `${API_BASE_URL}/rollOfferProposal/accepted/${providerAddress}?limit=1000`
+  )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
@@ -118,5 +117,6 @@ module.exports = {
   createCallstrikeProposal,
   markProposalAsExecuted,
   markRollOfferProposalAsExecuted,
-  fetchAcceptedRollOfferProposals
+  fetchAcceptedRollOfferProposals,
+  signAndGetTokenForAuth,
 }

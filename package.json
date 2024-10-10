@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "runbot": "git pull && pnpm i && pm2 restart ecosystem.config.cjs --update-env"
+    "runbot": "git pull && pnpm i && pm2 restart ecosystem.config.cjs --update-env",
+    "faucet": "node src/faucet.js"
   },
   "keywords": [],
   "author": "",
