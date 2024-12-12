@@ -36,7 +36,7 @@ const rollTries = {}
 async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
-  return 10800 // Example callstrike value
+  return 11000 // Example callstrike value
 }
 
 async function executeOnchainOffer(
@@ -205,8 +205,8 @@ async function processRollOfferProposals() {
 }
 
 async function poll() {
-  // await processAcceptedRequestProposals()
-  // await processOpenOfferRequests()
+  await processAcceptedRequestProposals()
+  await processOpenOfferRequests()
   await processRollOfferProposals()
   // Schedule the next processing cycle
   setTimeout(poll, POLL_INTERVAL_MS)
