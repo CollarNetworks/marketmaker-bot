@@ -52,7 +52,8 @@ async function executeOnchainOffer(
     oracleAddress,
     amount,
     callstrike,
-    ltv
+    ltv,
+    rpcUrl
   )
   const offerId = await createOnchainOffer(
     callstrike,
