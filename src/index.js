@@ -118,6 +118,10 @@ async function processAcceptedRequestProposals() {
   const response = await fetchOfferRequests("accepted")
   console.log({ response: response.data })
   const offerRequests = response.data
+  if (offerRequests.length === 0) {
+    console.log('No open offer requests found')
+    return
+  }
   const offer = offerRequests[0]
   // for (const offer of offerRequests) {
   try {
