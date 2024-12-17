@@ -17,7 +17,6 @@ async function fetchOfferRequests(status = 'open', networkId) {
     method: "GET",
     headers: {
       Authorization: `MMBOTBearer ${token}`,
-      'Chain-Id': networkId,
       'Environment': process.env.API_ENVIRONMENT,
       'Content-Type': 'application/json',
     }
@@ -49,7 +48,6 @@ async function createCallstrikeProposal(offerRequestId, callstrike, networkId) {
       method: 'POST',
       headers: {
         Authorization: `MMBOTBearer ${token}`,
-        'Chain-Id': networkId,
         'Environment': process.env.API_ENVIRONMENT,
         'Content-Type': 'application/json',
       },
@@ -83,7 +81,6 @@ async function markProposalAsExecuted(
       method: 'PATCH',
       headers: {
         Authorization: `MMBOTBearer ${token}`,
-        'Chain-Id': networkId,
         'Environment': process.env.API_ENVIRONMENT,
         'Content-Type': 'application/json',
       },
@@ -113,7 +110,6 @@ async function markRollOfferProposalAsExecuted(
       method: 'PATCH',
       headers: {
         Authorization: `MMBOTBearer ${token}`,
-        'Chain-Id': networkId,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -136,7 +132,6 @@ async function fetchRequestProposalsByProvider(requestId, provider, networkId) {
     method: "GET",
     headers: {
       Authorization: `MMBOTBearer ${token}`,
-      'Chain-Id': networkId,
       'Environment': process.env.API_ENVIRONMENT,
       'Content-Type': 'application/json',
     }
@@ -153,7 +148,6 @@ async function getProposalById(requestId, proposalId, networkId) {
     method: "GET",
     headers: {
       Authorization: `MMBOTBearer ${token}`,
-      'Chain-Id': networkId,
       'Environment': process.env.API_ENVIRONMENT,
       'Content-Type': 'application/json',
     }
@@ -170,7 +164,6 @@ async function fetchAcceptedRollOfferProposals(providerAddress, networkId) {
     method: "GET",
     headers: {
       Authorization: `MMBOTBearer ${token}`,
-      'Chain-Id': networkId,
       'Environment': process.env.API_ENVIRONMENT,
       'Content-Type': 'application/json',
     }
