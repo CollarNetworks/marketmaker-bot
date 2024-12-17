@@ -33,51 +33,56 @@ async function createOnchainOffer(
   rpcUrl
 ) {
 
-  const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
-  const providerContract = await getContractInstance(
-    rpcUrl,
-    providerNFTContractAddress,
-    PROVIDER_NFT_ABI,
-    wallet
-  )
-  const cashAsset = await providerContract.cashAsset()
-  const cashAssetContract = await getContractInstance(
-    rpcUrl,
-    cashAsset,
-    ERC20_ABI,
-    wallet
-  )
-  const approvalTX = await cashAssetContract.approve(
-    providerNFTContractAddress,
-    amount
-  )
-  await approvalTX.wait()
-  /**
-     function createOffer(
-        uint callStrikePercent,
-        uint amount,
-        uint putStrikePercent,
-        uint duration,
-        uint minLocked
-    ) external whenNotPaused returns (uint offerId)
-     */
-  const tx = await providerContract.createOffer(
-    callstrike,
-    amount,
-    ltv,
-    duration,
-    amount * 90n / 100n // minimum lock 90% amount since this is a targetted offer
-  )
-  const receipt = await tx.wait()
-  const events = await parseReceipt(receipt, providerContract)
-  const offerCreatedEvent = events.find(
-    (event) => event.name === 'OfferCreated'
-  )
-  if (!offerCreatedEvent) {
-    throw new Error('OfferCreated event not found in the transaction receipt)')
+  try {
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    const providerContract = await getContractInstance(
+      rpcUrl,
+      providerNFTContractAddress,
+      PROVIDER_NFT_ABI,
+      wallet
+    )
+    const cashAsset = await providerContract.cashAsset()
+    const cashAssetContract = await getContractInstance(
+      rpcUrl,
+      cashAsset,
+      ERC20_ABI,
+      wallet
+    )
+    const approvalTX = await cashAssetContract.approve(
+      providerNFTContractAddress,
+      amount
+    )
+    await approvalTX.wait()
+    /**
+       function createOffer(
+          uint callStrikePercent,
+          uint amount,
+          uint putStrikePercent,
+          uint duration,
+          uint minLocked
+      ) external whenNotPaused returns (uint offerId)
+       */
+    const tx = await providerContract.createOffer(
+      callstrike,
+      amount,
+      ltv,
+      duration,
+      amount * 90n / 100n // minimum lock 90% amount since this is a targetted offer
+    )
+    const receipt = await tx.wait()
+    const events = await parseReceipt(receipt, providerContract)
+    const offerCreatedEvent = events.find(
+      (event) => event.name === 'OfferCreated'
+    )
+    if (!offerCreatedEvent) {
+      throw new Error('OfferCreated event not found in the transaction receipt)')
+    }
+    const offerId = offerCreatedEvent.args.offerId
+    return offerId
+  } catch (e) {
+    console.log("error creating offer, ", e)
+    throw e
   }
-  const offerId = offerCreatedEvent.args.offerId
-  return offerId
 }
 
 async function createOnchainRollOffer(proposal, rpcUrl) {
