@@ -116,7 +116,7 @@ async function processOpenOfferRequests() {
 }
 
 async function processAcceptedRequestProposals() {
-  const response = await fetchOfferRequests("accepted")
+  const response = await fetchOfferRequests("accepted", CHAIN_ID)
   console.log({ response: response.data })
   const offerRequests = response.data
   if (offerRequests.length === 0) {
