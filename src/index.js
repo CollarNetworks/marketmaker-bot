@@ -3,16 +3,21 @@ const {
   createOnchainOffer,
   createOnchainRollOffer,
   getProviderLockedCashFromOracleAndTerms,
+  getCurrentPrice,
 } = require('./adapters/collarProtocol')
 const {
   fetchOfferRequests,
   markProposalAsExecuted,
   createCallstrikeProposal,
-  fetchAcceptedRollOfferProposals,
+  fetchAcceptedRollOfferProposalsByProvider,
   markRollOfferProposalAsExecuted,
   fetchRequestProposalsByProvider,
   getProposalById,
   getNetworkById,
+  getPositionsByProvider,
+  createPositionProposal,
+  getAssetPair,
+  fetchRollOfferProposalsByPosition,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -21,6 +26,7 @@ const {
   RPC_URL,
   MAX_RETRIES,
   CHAIN_ID,
+  BIPS_BASE,
 } = require('./constants')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
@@ -37,6 +43,32 @@ async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
   return 11000 // Example callstrike value
+}
+
+async function getProposalTermsByPosition(position, rollsContractAddress, price) {
+  const minPrice = price * 9500n / BigInt(BIPS_BASE)
+  const maxPrice = price * 10500n / BigInt(BIPS_BASE)
+  const d = new Date();
+  d.setMinutes(d.getMinutes() + 15);
+
+  return {
+    takerId: Number(position.loanId),
+    takerAddress: position.borrower,
+    providerNftAddress: position.pairedPosition.providerNFT.contractAddress,
+    providerId: position.pairedPosition.providerPosition.positionId,
+    rollsContractAddress,
+    loansContractAddress: position.loansNFT.contractAddress,
+    // terms
+    rollFeeAmount: "100",
+    rollFeeDeltaFactorBips: 5,
+    rollFeeReferencePrice: price.toString(),
+    minPrice: minPrice.toString(),
+    maxPrice: maxPrice.toString(),
+    minToProvider: "100",
+    deadline: d
+  }
+
+
 }
 
 async function executeOnchainOffer(
@@ -168,7 +200,7 @@ async function processAcceptedRequestProposals() {
 }
 
 async function processRollOfferProposals() {
-  const response = await fetchAcceptedRollOfferProposals(PROVIDER_ADDRESS, CHAIN_ID)
+  const response = await fetchAcceptedRollOfferProposalsByProvider(PROVIDER_ADDRESS, CHAIN_ID)
   const proposals = response.data
   if (proposals?.length === 0) {
     return
@@ -209,10 +241,44 @@ async function processRollOfferProposals() {
   }
 }
 
+
+async function processOpenPositions() {
+  // get open onchain positions 
+  const response = await getPositionsByProvider(CHAIN_ID);
+  const positions = response.data;
+  // loop through onchain positions and create a positionProposal on the API (roll proposal) if the position characteristics match determined values
+  for (const position of positions) {
+    if (position.status === 'Active') {
+      // create a position proposal on the API
+      try {
+        const { data: existingProposals } = await fetchRollOfferProposalsByPosition(PROVIDER_ADDRESS, position.loansNFT.contractAddress, position.loanId, CHAIN_ID)
+        if (existingProposals?.length === 0) {
+          const { data: network } = await getNetworkById(CHAIN_ID)
+          const rpcUrl = network.rpcUrl
+          const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
+          const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
+          const rollsContractAddress = pair.rollsContractAddress
+          const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
+          const proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
+          const response = await createPositionProposal(network.id, position.id, proposalToCreate);
+          const proposal = response.data;
+          console.log(`Created position proposal for position ${position.id} with proposal id ${proposal?.id}`);
+        } else {
+          console.log(`Position proposal already exists for position ${position.id}`);
+        }
+      } catch (error) {
+        console.error(`Error during processing open positions: ${position.id}`, error);
+      }
+    }
+  }
+
+}
+
 async function poll() {
   await processAcceptedRequestProposals()
   await processOpenOfferRequests()
   await processRollOfferProposals()
+  await processOpenPositions()
   // Schedule the next processing cycle
   setTimeout(poll, POLL_INTERVAL_MS)
 }
