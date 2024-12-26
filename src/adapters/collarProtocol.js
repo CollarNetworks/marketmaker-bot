@@ -32,69 +32,81 @@ async function createOnchainOffer(
   providerNFTContractAddress,
   rpcUrl
 ) {
-  const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
-  const providerContract = await getContractInstance(
-    rpcUrl,
-    providerNFTContractAddress,
-    PROVIDER_NFT_ABI,
-    wallet
-  )
-  const cashAsset = await providerContract.cashAsset()
-  const cashAssetContract = await getContractInstance(
-    rpcUrl,
-    cashAsset,
-    ERC20_ABI,
-    wallet
-  )
-  const approvalTX = await cashAssetContract.approve(
-    providerNFTContractAddress,
-    amount
-  )
-  await approvalTX.wait()
-  /**
-     *  function createOffer(uint callStrikeDeviation, uint amount, uint putStrikeDeviation, uint duration)
-        external
-        returns (uint offerId);
-     */
-  const tx = await providerContract.createOffer(
-    callstrike,
-    amount,
-    ltv,
-    duration
-  )
-  const receipt = await tx.wait()
-  const events = await parseReceipt(receipt, providerContract)
-  const offerCreatedEvent = events.find(
-    (event) => event.name === 'OfferCreated'
-  )
-  if (!offerCreatedEvent) {
-    throw new Error('OfferCreated event not found in the transaction receipt)')
+
+  try {
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    const providerContract = await getContractInstance(
+      rpcUrl,
+      providerNFTContractAddress,
+      PROVIDER_NFT_ABI,
+      wallet
+    )
+    const cashAsset = await providerContract.cashAsset()
+    const cashAssetContract = await getContractInstance(
+      rpcUrl,
+      cashAsset,
+      ERC20_ABI,
+      wallet
+    )
+    const approvalTX = await cashAssetContract.approve(
+      providerNFTContractAddress,
+      amount
+    )
+    await approvalTX.wait()
+    /**
+       function createOffer(
+          uint callStrikePercent,
+          uint amount,
+          uint putStrikePercent,
+          uint duration,
+          uint minLocked
+      ) external whenNotPaused returns (uint offerId)
+       */
+    const tx = await providerContract.createOffer(
+      callstrike,
+      amount,
+      ltv,
+      duration,
+      amount * 90n / 100n // minimum lock 90% amount since this is a targetted offer
+    )
+    const receipt = await tx.wait()
+    const events = await parseReceipt(receipt, providerContract)
+    const offerCreatedEvent = events.find(
+      (event) => event.name === 'OfferCreated'
+    )
+    if (!offerCreatedEvent) {
+      throw new Error('OfferCreated event not found in the transaction receipt)')
+    }
+    const offerId = offerCreatedEvent.args.offerId
+    return offerId
+  } catch (e) {
+    console.log("error creating offer, ", e)
+    throw e
   }
-  const offerId = offerCreatedEvent.args.offerId
-  return offerId
 }
 
 async function createOnchainRollOffer(proposal, rpcUrl) {
   try {
     // Get wallet instance
-    // const rpcUrl = 'https://virtual.arbitrum-sepolia.rpc.tenderly.co/aae1ab80-fdc7-46d1-a9ba-3ce19afb5125'
     const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
     // Get contract instance
     const rollsContract = await getContractInstance(
       rpcUrl,
-      proposal.rolls_contract_address,
+      proposal.rollsContractAddress,
       ROLLS_ABI,
       wallet
     )
 
     // Extract proposal terms
     const {
-      taker_id,
-      roll_fee_amount,
-      roll_fee_delta_factor_bips,
-      min_price,
-      max_price,
-      min_to_provider,
+      takerId,
+      rollFeeAmount,
+      rollFeeDeltaFactorBips,
+      minPrice,
+      maxPrice,
+      minToProvider,
+      loansContractAddress,
+      rollsContractAddress
     } = proposal
     const deadlineDate = new Date()
     deadlineDate.setMinutes(deadlineDate.getMinutes() + DEADLINE_MINUTES)
@@ -104,7 +116,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
     const takerNFTContractAddress =
       await getTakerNFTContractAddressByLoansContractAddress(
         rpcUrl,
-        proposal.loans_contract_address
+        loansContractAddress
       )
     const takerContract = await getContractInstance(
       rpcUrl,
@@ -113,7 +125,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
       wallet
     )
     const [providerNFTContractAddress, providerNFTId] =
-      await takerContract.getPosition(taker_id)
+      await takerContract.getPosition(takerId)
     // approve provider id to rolls
     const providerNFTContract = await getContractInstance(
       rpcUrl,
@@ -121,19 +133,20 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
       PROVIDER_NFT_ABI,
       wallet
     )
+
     const approvalTX = await providerNFTContract.approve(
-      proposal.rolls_contract_address,
+      rollsContractAddress,
       providerNFTId
     )
     await approvalTX.wait()
     // Create roll offer on-chain
-    const tx = await rollsContract.createRollOffer(
-      taker_id,
-      roll_fee_amount,
-      roll_fee_delta_factor_bips,
-      min_price,
-      max_price,
-      min_to_provider,
+    const tx = await rollsContract.createOffer(
+      takerId,
+      rollFeeAmount,
+      rollFeeDeltaFactorBips,
+      minPrice,
+      maxPrice,
+      minToProvider,
       deadline
     )
 
@@ -150,6 +163,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
       )
     }
     const rollId = offerCreatedEvent.args.rollId
+    console.log({ rollId })
     return rollId
   } catch (error) {
     console.error('Error creating roll offer on-chain:', error)
@@ -173,41 +187,39 @@ async function getTakerNFTContractAddressByLoansContractAddress(
 async function getProviderLockedCashFromOracleAndTerms(
   oracleAddress,
   collateralAmount,
-  callstrike
+  callStrike,
+  putStrike,
+  rpcUrl
 ) {
   // Get wallet instance
   const wallet = await getWalletInstance(
-    process.env.RPC_URL,
+    rpcUrl,
     process.env.PRIVATE_KEY
   )
   // Get contract instance
   const oracleContract = await getContractInstance(
-    process.env.RPC_URL,
+    rpcUrl,
     oracleAddress,
     ORACLE_ABI,
     wallet
   )
   const price = await oracleContract.currentPrice()
-  const baseTokenAmount = await oracleContract.BASE_TOKEN_AMOUNT()
-  const baseTokenAddress = await oracleContract.baseToken()
-  const baseTokenContract = await getContractInstance(
-    process.env.RPC_URL,
-    baseTokenAddress,
-    ERC20_ABI,
-    wallet
+  console.log({ price, collateralAmount })
+  const fullCashAmount = await oracleContract.convertToQuoteAmount(
+    collateralAmount,
+    price
   )
-  const baseTokenDecimals = await baseTokenContract.decimals()
-  const baseTokenScale = 10n ** BigInt(baseTokenDecimals)
-  // calculate the amount of cash the collateral represents : price * collateralAmount * baseTokenDecimalsScale / baseTokenAmount * baseTokenDecimalsScale
-  const cashAmount =
-    (BigInt(collateralAmount) * price * baseTokenScale) /
-    (baseTokenAmount * baseTokenScale)
-  // get percentage of provider locked amount e.g.: if callstrike is 11000 (110%) then providerLockedPercentage = 0.1
-  const providerLocked =
-    (cashAmount * (BigInt(callstrike) - BigInt(BIPS_BASE))) / BigInt(BIPS_BASE)
-  // calculate the amount of cash to be locked by the provider in the offer:  price of collateral in cash token * amount of collateral * providerLockedPercentage
+  console.log({ fullCashAmount })
+  // First calculate taker's locked amount
+  const loanAmount = (fullCashAmount * BigInt(putStrike)) / BigInt(BIPS_BASE);
+  const takerLocked = fullCashAmount - loanAmount;
 
+  // Then calculate provider's locked amount
+  const putRange = BigInt(BIPS_BASE) - BigInt(putStrike);
+  const callRange = BigInt(callStrike) - BigInt(BIPS_BASE);
+  const providerLocked = (takerLocked * callRange) / putRange;
   return providerLocked
+
 }
 
 module.exports = {

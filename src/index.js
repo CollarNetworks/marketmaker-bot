@@ -10,6 +10,9 @@ const {
   createCallstrikeProposal,
   fetchAcceptedRollOfferProposals,
   markRollOfferProposalAsExecuted,
+  fetchRequestProposalsByProvider,
+  getProposalById,
+  getNetworkById,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -17,6 +20,7 @@ const {
   POLL_INTERVAL_MS,
   RPC_URL,
   MAX_RETRIES,
+  CHAIN_ID,
 } = require('./constants')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
@@ -41,12 +45,15 @@ async function executeOnchainOffer(
   amount,
   duration,
   providerNFTContractAddress,
-  oracleAddress
+  oracleAddress,
+  rpcUrl
 ) {
   const cashAmount = await getProviderLockedCashFromOracleAndTerms(
     oracleAddress,
     amount,
-    callstrike
+    callstrike,
+    ltv,
+    rpcUrl
   )
   const offerId = await createOnchainOffer(
     callstrike,
@@ -54,89 +61,118 @@ async function executeOnchainOffer(
     cashAmount,
     duration,
     providerNFTContractAddress,
-    RPC_URL // change to rpc url from deployment data
+    rpcUrl
   )
   return offerId
 }
 
-function getAcceptedProposalFromProvider(offer) {
-  return offer.proposals.find(
-    (p) =>
-      (p.status === 'accepted' || p.is_accepted) &&
-      p.address === PROVIDER_ADDRESS
-  )
+async function getAcceptedProposalById(requestId, proposalId, networkId) {
+  const response = await getProposalById(requestId, proposalId, networkId)
+  console.log({ response: response })
+  return response.data
 }
 
-function getProposalsByProvider(offer) {
-  return offer.proposals.filter((p) => p.address === PROVIDER_ADDRESS)
+async function getProposalsByProvider(offer, networkId) {
+  const response = await fetchRequestProposalsByProvider(offer.id, PROVIDER_ADDRESS, networkId)
+  console.log({ response: response })
+  return response.data
 }
 
-async function processOfferRequests() {
-  const response = await fetchOfferRequests()
-  const offerRequests = response.data.offerRequests
-
-  for (const offer of offerRequests) {
-    try {
-      if (offer.status === 'open') {
-        const callstrike = await getCallstrikeByTerms(offer) // here's where the configurable callback logic would come in
-        const providerProposals = getProposalsByProvider(offer)
-        if (
-          providerProposals.length > 0 ||
-          (tries[offer.id] !== undefined && tries[offer.id] >= MAX_RETRIES)
-        ) {
-          // skip these as they failed twice already
-          continue
-        }
-        try {
-          const response = await createCallstrikeProposal(offer.id, callstrike)
-          const proposal = response.data
-          console.log(
-            `Created proposal for offer request ${offer.id} with callstrike ${callstrike} proposal id ${proposal.id}`
-          )
-        } catch (error) {
-          console.log('error', error)
-          tries[offer.id] = tries[offer.id] + 1 || 1
-          continue
-        }
-      } else if (offer.status === 'accepted') {
-        const acceptedProposal = getAcceptedProposalFromProvider(offer)
-        if (offer.ltv < 100) {
-          offer.ltv = offer.ltv * 100
-        }
-        if (offer.duration < 300) {
-          offer.duration = 300
-        }
-        if (acceptedProposal) {
-          const providerNFTAddress =
-            acceptedProposal.provider_nft_contract_address
-          const oracleAddress = acceptedProposal.oracle_contract_address
-          const onchainId = await executeOnchainOffer(
-            acceptedProposal.callstrike,
-            offer.ltv,
-            offer.collateral_amount,
-            offer.duration,
-            providerNFTAddress,
-            oracleAddress
-          )
-          await markProposalAsExecuted(
-            acceptedProposal.id,
-            Number(onchainId),
-            providerNFTAddress
-          )
-          console.log(
-            `Executed onchain offer for request ${offer.id}, execution ID: ${onchainId}`
-          )
-        }
-      }
-    } catch (error) {
-      console.error(`Error during processing:${offer.id}`, error)
-    }
+async function processOpenOfferRequests() {
+  const response = await fetchOfferRequests("open", CHAIN_ID)
+  console.log({ response: response.data })
+  const offerRequests = response.data
+  if (offerRequests.length === 0) {
+    console.log('No open offer requests found')
+    return
   }
+  const offer = offerRequests[0]
+  // for (const offer of offerRequests) {
+  try {
+    const callstrike = await getCallstrikeByTerms(offer) // here's where the configurable callback logic would come in
+    const providerProposals = await getProposalsByProvider(offer, offer.networkId)
+    if (
+      providerProposals.length > 0 ||
+      (tries[offer.id] !== undefined && tries[offer.id] >= MAX_RETRIES)
+    ) {
+      // skip these as they failed twice already
+      // continue
+    }
+    try {
+      const response = await createCallstrikeProposal(offer.id, callstrike, offer.networkId)
+      const proposal = response.data
+      console.log(
+        `Created proposal for offer request ${offer.id} with callstrike ${callstrike} proposal id ${proposal.id}`
+      )
+    } catch (error) {
+      console.log('error', error)
+      tries[offer.id] = tries[offer.id] + 1 || 1
+      // continue
+    }
+  } catch (error) {
+    console.error(`Error during processing open :${offer.id}`, error)
+  }
+  // }
+}
+
+async function processAcceptedRequestProposals() {
+  const response = await fetchOfferRequests("accepted", CHAIN_ID)
+  console.log({ response: response.data })
+  const offerRequests = response.data
+  if (offerRequests.length === 0) {
+    console.log('No open offer requests found')
+    return
+  }
+  const offer = offerRequests[0]
+  // for (const offer of offerRequests) {
+  try {
+    const acceptedProposal = await getAcceptedProposalById(offer.id, offer.acceptedProposalId, offer.networkId)
+    if (offer.ltv < 100) {
+      offer.ltv = offer.ltv * 100
+    }
+    if (offer.duration < 300) {
+      offer.duration = 300
+    }
+    if (acceptedProposal) {
+      console.log({ acceptedProposal })
+      const providerNFTAddress =
+        acceptedProposal.providerNftContractAddress
+      const oracleAddress = acceptedProposal.oracleContractAddress
+      const { data: network } = await getNetworkById(acceptedProposal.networkId)
+      console.log({ network })
+      const rpcUrl = network.rpcUrl
+      const onchainId = await executeOnchainOffer(
+        acceptedProposal.callstrike,
+        offer.ltv,
+        offer.collateralAmount,
+        offer.duration,
+        providerNFTAddress,
+        oracleAddress,
+        rpcUrl
+      )
+      console.log({ onchainId })
+      await markProposalAsExecuted(
+        acceptedProposal.networkId,
+        offer.id,
+        acceptedProposal.id,
+        Number(onchainId)
+      )
+      console.log(
+        `Executed onchain offer for request ${offer.id}, execution ID: ${onchainId}`
+      )
+    }
+  } catch (error) {
+    console.error(`Error during processing accepted: ${offer.id}`, error)
+  }
+  // }
 }
 
 async function processRollOfferProposals() {
-  const response = await fetchAcceptedRollOfferProposals(PROVIDER_ADDRESS)
-  const proposals = response.data.proposals
+  const response = await fetchAcceptedRollOfferProposals(PROVIDER_ADDRESS, CHAIN_ID)
+  const proposals = response.data
+  if (proposals?.length === 0) {
+    return
+  }
   for (proposal of proposals) {
     if (proposal.status === 'accepted') {
       // execute roll offer on chain with the proposal terms
@@ -149,16 +185,19 @@ async function processRollOfferProposals() {
             // skip these as they failed twice already
             continue
           }
+          const { data: network } = await getNetworkById(proposal.networkId)
+          const rpcUrl = network.rpcUrl
           const onchainRollOffer = await createOnchainRollOffer(
             proposal,
-            RPC_URL
+            rpcUrl
           )
           await markRollOfferProposalAsExecuted(
             proposal.id,
-            Number(onchainRollOffer)
+            onchainRollOffer.toString(),
+            network.id
           )
           console.log(
-            `Executed onchain roll offer for position ${proposal.taker_id} on loans contract : ${proposal.loans_contract_address}, execution ID: ${onchainRollOffer}`
+            `Executed onchain roll offer for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress}, execution ID: ${onchainRollOffer} `
           )
         } catch (e) {
           console.log('error', e)
@@ -171,7 +210,8 @@ async function processRollOfferProposals() {
 }
 
 async function poll() {
-  await processOfferRequests()
+  await processAcceptedRequestProposals()
+  await processOpenOfferRequests()
   await processRollOfferProposals()
   // Schedule the next processing cycle
   setTimeout(poll, POLL_INTERVAL_MS)
@@ -181,7 +221,7 @@ async function poll() {
 poll()
 
 console.log(
-  `Offer request processor running. Processing every ${POLL_INTERVAL_MS}ms. Press Ctrl+C to stop.`
+  `Offer request processor running.Processing every ${POLL_INTERVAL_MS} ms.Press Ctrl + C to stop.`
 )
 
 // Handle graceful shutdown
