@@ -222,8 +222,20 @@ async function getProviderLockedCashFromOracleAndTerms(
 
 }
 
+async function getCurrentPrice(rpcUrl, oracleAddress) {
+  // Get contract instance
+  const oracleContract = await getContractInstance(
+    rpcUrl,
+    oracleAddress,
+    ORACLE_ABI,
+  )
+  const price = await oracleContract.currentPrice()
+  return price
+}
+
 module.exports = {
   getProviderLockedCashFromOracleAndTerms,
   createOnchainOffer,
   createOnchainRollOffer,
+  getCurrentPrice
 }
