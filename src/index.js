@@ -76,7 +76,7 @@ async function getProposalTermsByPosition(position, rollsContractAddress, price)
 async function executeOnchainOffer(
   callstrike,
   ltv,
-  amount,
+  underlyingAmount,
   duration,
   providerNFTContractAddress,
   oracleAddress,
@@ -84,7 +84,7 @@ async function executeOnchainOffer(
 ) {
   const cashAmount = await getProviderLockedCashFromOracleAndTerms(
     oracleAddress,
-    amount,
+    underlyingAmount,
     callstrike,
     ltv,
     rpcUrl
@@ -165,13 +165,16 @@ async function processAcceptedRequestProposals() {
       if (offer.duration < 300) {
         offer.duration = 300
       }
-      if (acceptedProposal) {
-        console.log({ acceptedProposal })
+      if (acceptedProposal && acceptedProposal.address.toLowerCase() === PROVIDER_ADDRESS.toLowerCase()) {
+        // avoid proposal duplication 
+        // if already onchain or expired skip
+        if (acceptedProposal.status === 'offerCreated' || new Date(acceptedProposal.deadline) < new Date()) {
+          continue
+        }
         const providerNFTAddress =
           acceptedProposal.providerNftContractAddress
         const oracleAddress = acceptedProposal.oracleContractAddress
         const { data: network } = await getNetworkById(acceptedProposal.networkId)
-        console.log({ network })
         const rpcUrl = network.rpcUrl
         const onchainId = await executeOnchainOffer(
           acceptedProposal.callstrike,
@@ -311,7 +314,13 @@ async function poll() {
   await processOpenOfferRequests()
   await processRollOfferProposals()
   await processOpenPositions()
-  // await pullAllOffers()
+
+  // await pullAllOffers() // delete all onchain offers from this provider (cleanup method)
+
+  /**  @TODO: pull money from onchain  offers that match an expired callstrike proposal 
+  (get all expired offerCreated proposals from this provider , loop and updateAmount to 0)
+  **/
+
   // Schedule the next processing cycle
   setTimeout(poll, POLL_INTERVAL_MS)
 }

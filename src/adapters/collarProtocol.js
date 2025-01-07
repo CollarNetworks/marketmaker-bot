@@ -67,7 +67,7 @@ async function createOnchainOffer(
       amount,
       ltv,
       duration,
-      amount * 90n / 100n // minimum lock 90% amount since this is a targetted offer
+      10n // minimum 10 wei
     )
     const receipt = await tx.wait()
     const events = await parseReceipt(receipt, providerContract)
