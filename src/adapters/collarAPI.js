@@ -239,6 +239,21 @@ async function createPositionProposal(networkId, positionId, proposalToCreate) {
   return await response.json()
 }
 
+async function getOffersByProviderAndStatus(networkId, providerAddress, status) {
+  const token = await signAndGetTokenForAuth()
+  const response = await fetch(`${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${status ? `&status=${status}` : ''}`, {
+    method: "GET",
+    headers: {
+      Authorization: `MMBOTBearer ${token}`,
+      'Environment': process.env.API_ENVIRONMENT,
+      'Content-Type': 'application/json',
+    }
+  })
+
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+  return await response.json()
+}
+
 module.exports = {
   fetchOfferRequests,
   getProposalById,
@@ -251,5 +266,6 @@ module.exports = {
   getNetworkById,
   getAssetPair,
   getPositionsByProvider,
-  createPositionProposal
+  createPositionProposal,
+  getOffersByProviderAndStatus
 }
