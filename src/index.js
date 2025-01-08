@@ -292,16 +292,14 @@ async function pullAllOffers() {
     const { data: network } = await getNetworkById(CHAIN_ID)
     const rpcUrl = network.rpcUrl
     for (const offer of offers) {
-      if (offer.status === 'Active') {
-        try {
-          const success = await cancelOnchainOffer(offer.offerId, offer.collarProviderNFT?.contractAddress, rpcUrl)
-          if (success) {
-            console.log(`Successfully cancelled offer ${offer.offerId}`)
-          }
-        } catch (e) {
-          console.log(`error cancelling offer ${offer.offerId} `, e)
-          continue
+      try {
+        const success = await cancelOnchainOffer(offer.offerId, offer.collarProviderNFT?.contractAddress, rpcUrl)
+        if (success) {
+          console.log(`Successfully cancelled offer ${offer.offerId}`)
         }
+      } catch (e) {
+        console.log(`error cancelling offer ${offer.offerId} `, e)
+        continue
       }
     }
   } catch (e) {
