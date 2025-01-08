@@ -4,6 +4,7 @@ const {
   createOnchainRollOffer,
   getProviderLockedCashFromOracleAndTerms,
   getCurrentPrice,
+  cancelOnchainOffer,
 } = require('./adapters/collarProtocol')
 const {
   fetchOfferRequests,
@@ -18,6 +19,7 @@ const {
   createPositionProposal,
   getAssetPair,
   fetchRollOfferProposalsByPosition,
+  getOffersByProviderAndStatus,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -74,7 +76,7 @@ async function getProposalTermsByPosition(position, rollsContractAddress, price)
 async function executeOnchainOffer(
   callstrike,
   ltv,
-  amount,
+  underlyingAmount,
   duration,
   providerNFTContractAddress,
   oracleAddress,
@@ -82,7 +84,7 @@ async function executeOnchainOffer(
 ) {
   const cashAmount = await getProviderLockedCashFromOracleAndTerms(
     oracleAddress,
-    amount,
+    underlyingAmount,
     callstrike,
     ltv,
     rpcUrl
@@ -163,13 +165,16 @@ async function processAcceptedRequestProposals() {
       if (offer.duration < 300) {
         offer.duration = 300
       }
-      if (acceptedProposal) {
-        console.log({ acceptedProposal })
+      if (acceptedProposal && acceptedProposal.address.toLowerCase() === PROVIDER_ADDRESS.toLowerCase()) {
+        // avoid proposal duplication 
+        // if already onchain or expired skip
+        if (acceptedProposal.status === 'offerCreated' || new Date(acceptedProposal.deadline) < new Date()) {
+          continue
+        }
         const providerNFTAddress =
           acceptedProposal.providerNftContractAddress
         const oracleAddress = acceptedProposal.oracleContractAddress
         const { data: network } = await getNetworkById(acceptedProposal.networkId)
-        console.log({ network })
         const rpcUrl = network.rpcUrl
         const onchainId = await executeOnchainOffer(
           acceptedProposal.callstrike,
@@ -242,34 +247,64 @@ async function processRollOfferProposals() {
 
 async function processOpenPositions() {
   // get open onchain positions 
-  const response = await getPositionsByProvider(CHAIN_ID);
-  const positions = response.data;
-  // loop through onchain positions and create a positionProposal on the API (roll proposal) if the position characteristics match determined values
-  for (const position of positions) {
-    if (position.status === 'Active') {
-      // create a position proposal on the API
-      try {
-        const { data: existingProposals } = await fetchRollOfferProposalsByPosition(PROVIDER_ADDRESS, position.loansNFT.contractAddress, position.loanId, CHAIN_ID)
-        if (existingProposals?.length === 0) {
-          const { data: network } = await getNetworkById(CHAIN_ID)
-          const rpcUrl = network.rpcUrl
-          const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
-          const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
-          const rollsContractAddress = pair.rollsContractAddress
-          const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
-          const proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
-          const response = await createPositionProposal(network.id, position.id, proposalToCreate);
-          const proposal = response.data;
-          console.log(`Created position proposal for position ${position.id} with proposal id ${proposal?.id}`);
-        } else {
-          console.log(`Position proposal already exists for position ${position.id}`);
+  try {
+
+    const response = await getPositionsByProvider(CHAIN_ID);
+    const positions = response.data;
+    // loop through onchain positions and create a positionProposal on the API (roll proposal) if the position characteristics match determined values
+    for (const position of positions) {
+      if (position.status === 'Active') {
+        // create a position proposal on the API
+        try {
+          const { data: existingProposals } = await fetchRollOfferProposalsByPosition(PROVIDER_ADDRESS, position.loansNFT.contractAddress, position.loanId, CHAIN_ID)
+          if (existingProposals?.length === 0) {
+            const { data: network } = await getNetworkById(CHAIN_ID)
+            const rpcUrl = network.rpcUrl
+            const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
+            const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
+            const rollsContractAddress = pair.rollsContractAddress
+            const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
+            const proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
+            const response = await createPositionProposal(network.id, position.id, proposalToCreate);
+            const proposal = response.data;
+            console.log(`Created position proposal for position ${position.id} with proposal id ${proposal?.id}`);
+          } else {
+            console.log(`Position proposal already exists for position ${position.id}`);
+          }
+        } catch (error) {
+          console.error(`Error during processing open positions: ${position.id}`, error);
         }
-      } catch (error) {
-        console.error(`Error during processing open positions: ${position.id}`, error);
       }
     }
+  } catch (e) {
+    console.log('failed to get positions by provider ', e)
   }
 
+}
+
+
+
+async function pullAllOffers() {
+  try {
+    // get all offers from provider 
+    const { data: offers } = await getOffersByProviderAndStatus(CHAIN_ID, PROVIDER_ADDRESS, 'Active')
+    // loop through offers and cancel them
+    const { data: network } = await getNetworkById(CHAIN_ID)
+    const rpcUrl = network.rpcUrl
+    for (const offer of offers) {
+      try {
+        const success = await cancelOnchainOffer(offer.offerId, offer.collarProviderNFT?.contractAddress, rpcUrl)
+        if (success) {
+          console.log(`Successfully cancelled offer ${offer.offerId}`)
+        }
+      } catch (e) {
+        console.log(`error cancelling offer ${offer.offerId} `, e)
+        continue
+      }
+    }
+  } catch (e) {
+    console.log('error pulling all offers', e)
+  }
 }
 
 async function poll() {
@@ -277,6 +312,13 @@ async function poll() {
   await processOpenOfferRequests()
   await processRollOfferProposals()
   await processOpenPositions()
+
+  // await pullAllOffers() // delete all onchain offers from this provider (cleanup method)
+
+  /**  @TODO: pull money from onchain  offers that match an expired callstrike proposal 
+  (get all expired offerCreated proposals from this provider , loop and updateAmount to 0)
+  **/
+
   // Schedule the next processing cycle
   setTimeout(poll, POLL_INTERVAL_MS)
 }
@@ -285,7 +327,7 @@ async function poll() {
 poll()
 
 console.log(
-  `Offer request processor running.Processing every ${POLL_INTERVAL_MS} ms.Press Ctrl + C to stop.`
+  `Processing every ${POLL_INTERVAL_MS} ms.Press Ctrl + C to stop.`
 )
 
 // Handle graceful shutdown

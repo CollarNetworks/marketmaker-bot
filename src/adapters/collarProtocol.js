@@ -67,7 +67,7 @@ async function createOnchainOffer(
       amount,
       ltv,
       duration,
-      amount * 90n / 100n // minimum lock 90% amount since this is a targetted offer
+      10n // minimum 10 wei
     )
     const receipt = await tx.wait()
     const events = await parseReceipt(receipt, providerContract)
@@ -233,9 +233,38 @@ async function getCurrentPrice(rpcUrl, oracleAddress) {
   return price
 }
 
+
+async function cancelOnchainOffer(offerId, providerNFTContractAddress, rpcUrl) {
+  try {
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    const providerContract = await getContractInstance(
+      rpcUrl,
+      providerNFTContractAddress,
+      PROVIDER_NFT_ABI,
+      wallet
+    )
+    const tx = await providerContract.updateOfferAmount(offerId, 0)
+    const receipt = await tx.wait()
+    const events = await parseReceipt(receipt, providerContract)
+    const offerUpdatedEvent = events.find(
+      (event) => event.name === 'OfferUpdated'
+    )
+    if (!offerUpdatedEvent) {
+      throw new Error('OfferUpdated event not found in the transaction receipt)')
+    }
+
+    return true
+  } catch (e) {
+    console.log("error cancelling offer, ", e)
+    throw e
+  }
+}
+
+
 module.exports = {
   getProviderLockedCashFromOracleAndTerms,
   createOnchainOffer,
   createOnchainRollOffer,
-  getCurrentPrice
+  getCurrentPrice,
+  cancelOnchainOffer
 }
