@@ -8,6 +8,12 @@ const LOG_IN_MESSAGE =
 const RPC_URL = process.env.RPC_URL
 const MAX_RETRIES = process.env.MAX_RETRIES || 3
 const CHAIN_ID = process.env.CHAIN_ID
+const PROVIDER_BOT_ACTIVE = process.env.PROVIDER_BOT_ACTIVE || true
+const LENDER_BOT_ACTIVE = process.env.LENDER_BOT_ACTIVE || true
+
+// Cache settings
+const CACHE_REFRESH_INTERVAL = 15 * 60 * 1000 // 15 minutes in milliseconds
+
 module.exports = {
   RPC_URL,
   API_BASE_URL,
@@ -17,5 +23,8 @@ module.exports = {
   LOG_IN_MESSAGE,
   MAX_RETRIES,
   BIPS_BASE: 10_000,
-  CHAIN_ID
+  CHAIN_ID,
+  PROVIDER_BOT_ACTIVE,
+  LENDER_BOT_ACTIVE,
+  CACHE_REFRESH_INTERVAL,
 }
