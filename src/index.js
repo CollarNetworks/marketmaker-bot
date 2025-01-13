@@ -47,7 +47,8 @@ const rollTries = {}
 async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
-  return 11000 // Example callstrike value
+  // Example callstrike value
+  return Number((Math.random() * (16000 - 12000) + 12000).toFixed(2));
 }
 
 async function getProposalTermsByPosition(position, rollsContractAddress, price) {
@@ -394,8 +395,8 @@ async function pullAllOffers() {
 }
 
 async function poll() {
-  await processAcceptedRequestProposals()
-  await processOpenOfferRequests()
+  // await processAcceptedRequestProposals()
+  // await processOpenOfferRequests()
   await processRollOfferProposals()
   await processOpenPositions()
 
