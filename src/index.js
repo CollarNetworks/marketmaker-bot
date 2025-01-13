@@ -4,13 +4,13 @@ const {
   createOnchainRollOffer,
   getProviderLockedCashFromOracleAndTerms,
   getCurrentPrice,
-  cancelOnchainOffer,
+  cancelOnchainRollOffer,
+  getOnchainRollOffer,
 } = require('./adapters/collarProtocol')
 const {
   fetchOfferRequests,
   markProposalAsExecuted,
   createCallstrikeProposal,
-  fetchAcceptedRollOfferProposalsByProvider,
   markRollOfferProposalAsExecuted,
   fetchRequestProposalsByProvider,
   getProposalById,
@@ -20,6 +20,9 @@ const {
   getAssetPair,
   fetchRollOfferProposalsByPosition,
   getOffersByProviderAndStatus,
+  fetchRollOfferProposalsByProvider,
+  getPositionById,
+  updatePositionProposal,
 } = require('./adapters/collarAPI')
 const {
   API_BASE_URL,
@@ -102,13 +105,13 @@ async function executeOnchainOffer(
 
 async function getAcceptedProposalById(requestId, proposalId, networkId) {
   const response = await getProposalById(requestId, proposalId, networkId)
-  console.log({ response: response })
+
   return response.data
 }
 
 async function getProposalsByProvider(offer, networkId) {
   const response = await fetchRequestProposalsByProvider(offer.id, PROVIDER_ADDRESS, networkId)
-  console.log({ response: response })
+
   return response.data
 }
 
@@ -202,13 +205,48 @@ async function processAcceptedRequestProposals() {
   }
 }
 
+async function handleCreatePositionProposal(position, networkId) {
+  const { data: network } = await getNetworkById(networkId)
+  const rpcUrl = network.rpcUrl
+  const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
+  const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
+  const rollsContractAddress = pair.rollsContractAddress
+  const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
+  const proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
+  const response = await createPositionProposal(network.id, position.id, proposalToCreate);
+  const proposal = response.data;
+  console.log(`Created position proposal for position ${position.id} with proposal id ${proposal?.id}`);
+  return proposal
+}
+
+async function handleUpdatePositionProposal(position, proposalId, networkId) {
+  const { data: network } = await getNetworkById(networkId)
+  const rpcUrl = network.rpcUrl
+  const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
+  const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
+  const rollsContractAddress = pair.rollsContractAddress
+  const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
+  let proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
+  const proposalUpdate = {
+    ...proposalToCreate,
+    isExecuted: false,
+    isAccepted: false,
+    status: 'proposed',
+  }
+  const response = await updatePositionProposal(network.id, proposalId, proposalUpdate);
+  const proposal = response.data;
+  return proposal
+}
+
 async function processRollOfferProposals() {
-  const response = await fetchAcceptedRollOfferProposalsByProvider(PROVIDER_ADDRESS, CHAIN_ID)
+  const response = await fetchRollOfferProposalsByProvider(PROVIDER_ADDRESS, CHAIN_ID)
   const proposals = response.data
+
   if (proposals?.length === 0) {
     return
   }
   for (proposal of proposals) {
+    const positionId = `${proposal.loansContractAddress}-${proposal.takerId}`
     if (proposal.status === 'accepted') {
       // execute roll offer on chain with the proposal terms
       if (new Date(proposal.deadline) > new Date()) {
@@ -235,7 +273,64 @@ async function processRollOfferProposals() {
             `Executed onchain roll offer for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress}, execution ID: ${onchainRollOffer} `
           )
         } catch (e) {
-          console.log('error', e)
+          console.log('error executing onchain offer', e)
+          rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
+          continue
+        }
+      } else {
+        // if proposal is accepted but expired , repropose 
+        try {
+          const { data: position } = await getPositionById(proposal.networkId, positionId)
+          await handleUpdatePositionProposal(position, proposal.id, proposal.networkId)
+          console.log(
+            `Reproposed accepted position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
+          )
+        } catch (e) {
+          console.log('error reproposing expired proposal', e)
+          rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
+          continue
+        }
+      }
+    }
+
+    if (proposal.status === 'proposed') {
+      // if its proposed but expired, repropose, else skip
+      if (new Date(proposal.deadline) < new Date()) {
+        try {
+          const { data: position } = await getPositionById(proposal.networkId, positionId)
+          await handleUpdatePositionProposal(position, proposal.id, proposal.networkId)
+          console.log(
+            `Reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
+          )
+        } catch (e) {
+          console.log('error reproposing expired proposal', e)
+          rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
+          continue
+        }
+      }
+    }
+    if (proposal.status == 'offerCreated') {
+      // if offerCreated and onchain is expired, pull onchain roll offer and repropose, else skip
+      if (new Date(proposal.deadline) < new Date()) {
+        try {
+          const { data: network } = await getNetworkById(proposal.networkId)
+          const rpcUrl = network.rpcUrl
+          const onchainOffer = await getOnchainRollOffer(proposal.onchainOfferId, proposal.rollsContractAddress, rpcUrl)
+          const onchainDeadline = new Date(Number(onchainOffer.deadline) * 1000)
+          if (onchainDeadline < new Date() && onchainOffer.active) {
+            const success = await cancelOnchainRollOffer(proposal.onchainOfferId, proposal.rollsContractAddress, rpcUrl)
+            if (success) {
+              console.log(`Successfully cancelled onchain roll offer ${proposal.onchainOfferId}`)
+            }
+
+            const { data: position } = await getPositionById(proposal.networkId, positionId)
+            await handleUpdatePositionProposal(position, proposal.id, proposal.networkId)
+            console.log(
+              `Cancelled onchain and reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
+            )
+          }
+        } catch (e) {
+          console.log('error reproposing expired onchain offer', e)
           rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
           continue
         }
@@ -258,16 +353,7 @@ async function processOpenPositions() {
         try {
           const { data: existingProposals } = await fetchRollOfferProposalsByPosition(PROVIDER_ADDRESS, position.loansNFT.contractAddress, position.loanId, CHAIN_ID)
           if (existingProposals?.length === 0) {
-            const { data: network } = await getNetworkById(CHAIN_ID)
-            const rpcUrl = network.rpcUrl
-            const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
-            const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
-            const rollsContractAddress = pair.rollsContractAddress
-            const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
-            const proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
-            const response = await createPositionProposal(network.id, position.id, proposalToCreate);
-            const proposal = response.data;
-            console.log(`Created position proposal for position ${position.id} with proposal id ${proposal?.id}`);
+            handleCreatePositionProposal(position, CHAIN_ID)
           } else {
             console.log(`Position proposal already exists for position ${position.id}`);
           }
