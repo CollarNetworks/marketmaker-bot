@@ -171,6 +171,51 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
   }
 }
 
+async function cancelOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl) {
+  try {
+    // Get wallet instance
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    // Get contract instance
+    const rollsContract = await getContractInstance(
+      rpcUrl,
+      rollsContractAddress,
+      ROLLS_ABI,
+      wallet
+    )
+
+    const tx = await rollsContract.cancelOffer(rollOfferId)
+    const receipt = await tx.wait()
+    const events = await parseReceipt(receipt, rollsContract)
+    const offerCancelledEvent = events.find(
+      (event) => event.name === 'OfferCancelled'
+    )
+    if (!offerCancelledEvent) {
+      throw new Error('OfferCancelled event not found in the transaction receipt)')
+    }
+    return true
+  } catch (e) {
+    console.log("error cancelling offer, ", e)
+    throw e
+  }
+}
+
+async function getOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl) {
+  try {
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    const rollsContract = await getContractInstance(
+      rpcUrl,
+      rollsContractAddress,
+      ROLLS_ABI,
+      wallet
+    )
+    const rollOffer = await rollsContract.getRollOffer(rollOfferId)
+    return rollOffer
+  } catch (e) {
+    console.log("error getting roll offer, ", e)
+    throw e
+  }
+}
+
 async function getTakerNFTContractAddressByLoansContractAddress(
   rpcUrl,
   loansContractAddress
@@ -264,7 +309,9 @@ async function cancelOnchainOffer(offerId, providerNFTContractAddress, rpcUrl) {
 module.exports = {
   getProviderLockedCashFromOracleAndTerms,
   createOnchainOffer,
+  cancelOnchainOffer,
   createOnchainRollOffer,
+  getOnchainRollOffer,
   getCurrentPrice,
-  cancelOnchainOffer
+  cancelOnchainRollOffer
 }
