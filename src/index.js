@@ -310,7 +310,7 @@ async function processRollOfferProposals() {
         }
       }
     }
-    if (proposal.status == 'offerCreated') {
+    if (proposal.status === 'offerCreated') {
       // if offerCreated and onchain is expired, pull onchain roll offer and repropose, else skip
       if (new Date(proposal.deadline) < new Date()) {
         try {
@@ -395,8 +395,8 @@ async function pullAllOffers() {
 }
 
 async function poll() {
-  // await processAcceptedRequestProposals()
-  // await processOpenOfferRequests()
+  await processAcceptedRequestProposals()
+  await processOpenOfferRequests()
   await processRollOfferProposals()
   await processOpenPositions()
 
