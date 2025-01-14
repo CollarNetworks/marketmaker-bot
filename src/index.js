@@ -393,10 +393,10 @@ async function pullAllOffers() {
 }
 
 async function poll() {
-  // await processAcceptedRequestProposals()
-  // await processOpenOfferRequests()
+  await processAcceptedRequestProposals()
+  await processOpenOfferRequests()
   await processRollOfferProposals()
-  // await processOpenPositions()
+  await processOpenPositions()
 
   // await pullAllOffers() // delete all onchain offers from this provider (cleanup method)
 
