@@ -48,7 +48,7 @@ async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
   // Example callstrike value
-  return Number((Math.random() * (16000 - 12000) + 12000).toFixed(2));
+  return Math.round((Math.random() * (16000 - 12000) + 12000));
 }
 
 async function getProposalTermsByPosition(position, rollsContractAddress, price) {
@@ -118,7 +118,6 @@ async function getProposalsByProvider(offer, networkId) {
 
 async function processOpenOfferRequests() {
   const response = await fetchOfferRequests("open", CHAIN_ID)
-  console.log({ response: response.data })
   const offerRequests = response.data
   if (offerRequests.length === 0) {
     console.log('No open offer requests found')
@@ -154,7 +153,6 @@ async function processOpenOfferRequests() {
 
 async function processAcceptedRequestProposals() {
   const response = await fetchOfferRequests("accepted", CHAIN_ID)
-  console.log({ response: response.data })
   const offerRequests = response.data
   if (offerRequests.length === 0) {
     console.log('No open offer requests found')
