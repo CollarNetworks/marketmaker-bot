@@ -139,6 +139,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
       providerNFTId
     )
     await approvalTX.wait()
+
     // Create roll offer on-chain
     const tx = await rollsContract.createOffer(
       takerId,
@@ -166,7 +167,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
     console.log({ rollId })
     return rollId
   } catch (error) {
-    console.error('Error creating roll offer on-chain:', error)
+    console.error(`Error creating roll offer on-chain for proposal ${proposal.id} and takerId ${proposal.takerId} on loans ${proposal.loansContractAddress}:`, error)
     throw error
   }
 }
@@ -194,7 +195,7 @@ async function cancelOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl)
     }
     return true
   } catch (e) {
-    console.log("error cancelling offer, ", e)
+    console.log(`error cancelling roll offer id: ${rollOfferId} `, e)
     throw e
   }
 }
@@ -300,7 +301,7 @@ async function cancelOnchainOffer(offerId, providerNFTContractAddress, rpcUrl) {
 
     return true
   } catch (e) {
-    console.log("error cancelling offer, ", e)
+    console.log(`error cancelling offer, ${offerId} `, e)
     throw e
   }
 }

@@ -285,7 +285,7 @@ async function processRollOfferProposals() {
             `Reproposed accepted position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
           )
         } catch (e) {
-          console.log('error reproposing expired proposal', e)
+          console.log(`error reproposing expired proposal ${proposal.id} for takerId ${proposal.takerId}`, e)
           rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
           continue
         }
@@ -302,7 +302,7 @@ async function processRollOfferProposals() {
             `Reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
           )
         } catch (e) {
-          console.log('error reproposing expired proposal', e)
+          console.log(`error reproposing expired proposal ${proposal.id} for takerId ${proposal.takerId}`, e)
           rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
           continue
         }
