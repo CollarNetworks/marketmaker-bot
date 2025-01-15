@@ -48,7 +48,7 @@ async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
   // Example callstrike value
-  return Math.round((Math.random() * (16000 - 12000) + 12000));
+  return Math.round((Math.random() * (10800 - 11600) + 12000));
 }
 
 async function getProposalTermsByPosition(position, rollsContractAddress, price) {
