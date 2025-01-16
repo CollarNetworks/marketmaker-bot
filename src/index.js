@@ -32,6 +32,8 @@ const {
   MAX_RETRIES,
   CHAIN_ID,
   BIPS_BASE,
+  MIN_CALLSTRIKE,
+  MAX_CALLSTRIKE,
 } = require('./constants')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
@@ -48,7 +50,8 @@ async function getCallstrikeByTerms(terms) {
   // Implement the logic to get callstrike by terms by config callback
   // This is a placeholder implementation
   // Example callstrike value
-  return Math.round((Math.random() * (16000 - 12000) + 12000));
+
+  return Math.round((Math.random() * (MIN_CALLSTRIKE - MAX_CALLSTRIKE) + MIN_CALLSTRIKE));
 }
 
 async function getProposalTermsByPosition(position, rollsContractAddress, price) {

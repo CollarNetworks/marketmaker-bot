@@ -8,6 +8,8 @@ const LOG_IN_MESSAGE =
 const RPC_URL = process.env.RPC_URL
 const MAX_RETRIES = process.env.MAX_RETRIES || 3
 const CHAIN_ID = process.env.CHAIN_ID
+const MIN_CALLSTRIKE = process.env.MIN_CALLSTRIKE || 10800
+const MAX_CALLSTRIKE = process.env.MAX_CALLSTRIKE || 11600
 module.exports = {
   RPC_URL,
   API_BASE_URL,
@@ -17,5 +19,7 @@ module.exports = {
   LOG_IN_MESSAGE,
   MAX_RETRIES,
   BIPS_BASE: 10_000,
-  CHAIN_ID
+  CHAIN_ID,
+  MIN_CALLSTRIKE,
+  MAX_CALLSTRIKE
 }
