@@ -1,8 +1,5 @@
 require('dotenv').config()
-const {
-  processRequests,
-  updateAcceptedRequestToOfferCreated,
-} = require('./services/request-service')
+const { processRequests } = require('./services/request-service')
 const {
   generateRollOfferProposal,
   processAcceptedRollOfferProposals,
@@ -19,7 +16,10 @@ const {
   PROVIDER_ADDRESS,
   POLL_INTERVAL_MS,
 } = require('./constants')
-const { generateEscrowProposal } = require('./services/escrow-service')
+const {
+  generateEscrowProposal,
+  executeEscrowProposal,
+} = require('./services/escrow-service')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
   console.error(
@@ -29,14 +29,15 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
 }
 
 async function poll() {
+  // RFQ
   await processRequests('open', [
     generateCallstrikeProposal,
     generateEscrowProposal,
   ])
-  await processRequests('accepted', [
-    executeCallstrikeProposal,
-    updateAcceptedRequestToOfferCreated,
-  ])
+  await processRequests('accepted', [executeCallstrikeProposal])
+  // await processRequests('acceptedEscrow', [executeEscrowProposal])
+
+  // Roll
   await processOpenPositions([generateRollOfferProposal])
   await processAcceptedRollOfferProposals([executeRollOffer])
 
