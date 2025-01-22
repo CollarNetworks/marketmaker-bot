@@ -221,13 +221,16 @@ async function getEscrowProposalById(requestId, proposalId, networkId) {
 
 async function createEscrowProposal(
   offerRequestId,
-  apr,
-  fee,
+  interestAPR,
+  lateFeeAPR,
+  minEscrow,
+  duration,
+  gracePeriod,
+  escrowSupplierNFTContractAddress,
   deadline,
   networkId
 ) {
   const token = await signAndGetTokenForAuth()
-
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/request/${offerRequestId}/escrow-proposal`,
     {
@@ -239,8 +242,12 @@ async function createEscrowProposal(
       },
       body: JSON.stringify({
         address: PROVIDER_ADDRESS,
-        apr,
-        fee,
+        interestAPR,
+        lateFeeAPR,
+        minEscrow,
+        duration,
+        gracePeriod,
+        escrowSupplierNFTContractAddress,
         deadline,
         offerRequestId,
         status: 'proposed',
@@ -418,8 +425,7 @@ async function getOffersByProviderAndStatus(
 ) {
   const token = await signAndGetTokenForAuth()
   const response = await fetch(
-    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${
-      status ? `&status=${status}` : ''
+    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${status ? `&status=${status}` : ''
     }`,
     {
       method: 'GET',

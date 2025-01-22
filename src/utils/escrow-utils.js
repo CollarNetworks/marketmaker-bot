@@ -1,4 +1,5 @@
 const { fetchEscrowSettings } = require('../adapters/collarAPI')
+const { createOnchainEscrowOffer } = require('../adapters/collarProtocol')
 const { DEADLINE_MINUTES, CACHE_REFRESH_INTERVAL } = require('../constants')
 
 let settingsCache = null
@@ -7,27 +8,18 @@ let lastCacheTime = null
 // Work in progress
 // will need help from Carlos
 async function executeOnchainEscrowOffer(
-  callstrike,
-  ltv,
-  underlyingAmount,
-  duration,
-  providerNFTContractAddress,
-  oracleAddress,
+  escrowProposal,
+  amount,
   rpcUrl
 ) {
-  const cashAmount = await getProviderLockedCashFromOracleAndTerms(
-    oracleAddress,
-    underlyingAmount,
-    callstrike,
-    ltv,
-    rpcUrl
-  )
-  const offerId = await createOnchainOffer(
-    callstrike,
-    ltv,
-    cashAmount,
-    duration,
-    providerNFTContractAddress,
+  const offerId = await createOnchainEscrowOffer(
+    escrowProposal.escrowSupplierNFTContractAddress,
+    amount,
+    escrowProposal.duration,
+    escrowProposal.interestAPR,
+    escrowProposal.gracePeriod,
+    escrowProposal.lateFeeAPR,
+    escrowProposal.minEscrow,
     rpcUrl
   )
   return offerId
@@ -47,9 +39,18 @@ async function getEscrowSettings() {
   }
 
   const defaultSettings = {
-    annualPercentageRate: 450,
-    originatingFee: 100,
+    interestAPR: 500,
+    lateFeeAPR: 5000,
+    minEscrow: 1,
+    gracePeriod: 7 * 3600 * 24,
+    deadline: new Date(),
+    escrowSupplierNFTContractAddress: '0x528fa3cc2c35b701a870d74601e0f24bb38231d0',
     deadlineMinutes: DEADLINE_MINUTES,
+  }
+
+  const defaultEscrowContracts = {
+    "0xf17eb654885afece15039a9aa26f91063cc693e0:0x69fc9d4d59843c6e55f00b5f66b263c963214c53": "0x528fa3cc2c35b701a870d74601e0f24bb38231d0",
+    "0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53": "0x14a2600fa25bdd5ba922715ac2bcc897062efc5f",
   }
 
   try {
@@ -58,13 +59,22 @@ async function getEscrowSettings() {
 
     if (settings) {
       const settingsObj = settings.reduce((prev, curr) => {
-        prev[`${curr.collateralAsset}:${curr.cashAsset}`] = {
+        const assetPair = `${curr.collateralAsset}:${curr.cashAsset}`
+        const contractAddress = defaultEscrowContracts[assetPair]
+        console.log({ contractAddress })
+        prev[assetPair] = {
           ...curr,
-          annualPercentageRate:
-            curr.annualPercentageRate || defaultSettings.annualPercentageRate,
-          originatingFee: curr.originatingFee || defaultSettings.originatingFee,
+          interestAPR:
+            curr.interestAPR || defaultSettings.interestAPR,
+          lateFeeAPR: curr.lateFeeAPR || defaultSettings.lateFeeAPR,
           deadlineMinutes:
             curr.deadlineMinutes || defaultSettings.deadlineMinutes,
+          minEscrow: curr.minEscrow || defaultSettings.minEscrow,
+          gracePeriod: curr.gracePeriod || defaultSettings.gracePeriod,
+          escrowSupplierNFTContractAddress:
+            curr.escrowSupplierNFTContractAddress ||
+            contractAddress,
+
         }
         return prev
       }, {})
@@ -96,8 +106,11 @@ async function getEscrowTermsBySettings(offer) {
   deadline.setMinutes(deadline.getMinutes() + settings.deadlineMinutes)
 
   return {
-    apr: settings.annualPercentageRate,
-    fee: settings.originatingFee,
+    interestAPR: settings.interestAPR,
+    lateFeeAPR: settings.lateFeeAPR,
+    minEscrow: settings.minEscrow,
+    gracePeriod: settings.gracePeriod,
+    escrowSupplierNFTContractAddress: settings.escrowSupplierNFTContractAddress,
     deadline,
   }
 }

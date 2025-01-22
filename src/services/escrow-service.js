@@ -36,14 +36,18 @@ async function generateEscrowProposal(offer) {
     try {
       const response = await createEscrowProposal(
         offer.id,
-        terms.apr,
-        terms.fee,
+        terms.interestAPR,
+        terms.lateFeeAPR,
+        terms.minEscrow,
+        offer.duration,
+        terms.gracePeriod,
+        terms.escrowSupplierNFTContractAddress,
         terms.deadline,
         offer.networkId
       )
       const proposal = response.data
       console.log(
-        `Created escrow proposal for offer request ${offer.id} with apr ${terms.apr} and fee ${terms.fee} proposal id ${proposal.id}`
+        `Created escrow proposal for offer request ${offer.id} with apr ${terms.interestAPR} and late fee APR ${terms.lateFeeAPR} proposal id ${proposal.id}`
       )
     } catch (error) {
       console.log('error', error)
