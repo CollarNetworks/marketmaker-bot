@@ -16,10 +16,7 @@ const {
   PROVIDER_ADDRESS,
   POLL_INTERVAL_MS,
 } = require('./constants')
-const {
-  generateEscrowProposal,
-  executeEscrowProposal,
-} = require('./services/escrow-service')
+const { generateEscrowProposal, executeEscrowProposal } = require('./services/escrow-service')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
   console.error(
@@ -31,8 +28,7 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
 async function poll() {
   // RFQ
   await processRequests('open', [
-    generateCallstrikeProposal,
-    generateEscrowProposal,
+    executeEscrowProposal
   ])
   await processRequests('accepted', [executeCallstrikeProposal])
   // await processRequests('acceptedEscrow', [executeEscrowProposal])

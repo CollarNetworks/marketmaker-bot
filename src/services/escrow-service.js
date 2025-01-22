@@ -71,7 +71,7 @@ async function executeEscrowProposal(offer) {
     return
 
   try {
-    const acceptedProposal = await getEscrowProposalById(
+    const { data: acceptedProposal } = await getEscrowProposalById(
       offer.id,
       offer.acceptedEscrowProposalId,
       offer.networkId
@@ -89,22 +89,22 @@ async function executeEscrowProposal(offer) {
       // avoid proposal duplication
       // if already onchain or expired skip
       if (
-        acceptedProposal.status === 'offerCreated' ||
-        new Date(acceptedProposal.deadline) < new Date()
+        acceptedProposal.status === 'offerCreated'
       ) {
         return
       }
-      const providerNFTAddress = acceptedProposal.providerNftContractAddress
-      const oracleAddress = acceptedProposal.oracleContractAddress
+
+      if (acceptedProposal.status === 'accepted' && acceptedProposal.deadline < new Date()) {
+        // if accepted and deadline is passed we need to repropose 
+        await generateEscrowProposal(offer)
+        return
+      }
+
       const { data: network } = await getNetworkById(acceptedProposal.networkId)
       const rpcUrl = network.rpcUrl
       const onchainId = await executeOnchainEscrowOffer(
-        acceptedProposal.callstrike,
-        offer.ltv,
+        acceptedProposal,
         offer.collateralAmount,
-        offer.duration,
-        providerNFTAddress,
-        oracleAddress,
         rpcUrl
       )
       console.log({ onchainId })
@@ -122,6 +122,9 @@ async function executeEscrowProposal(offer) {
     console.error(`Error during processing accepted: ${offer.id}`, error)
   }
 }
+
+
+
 
 module.exports = {
   generateEscrowProposal,
