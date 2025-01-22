@@ -208,7 +208,7 @@ async function createOnchainEscrowOffer(
     ERC20_ABI,
     wallet
   )
-  console.log({ assetContract, assetAddress, amount, escrowSupplierNFTContractAddress })
+
   const approvalTX = await assetContract.approve(
     escrowSupplierNFTContractAddress,
     amount

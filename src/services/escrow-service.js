@@ -4,6 +4,7 @@ const {
   getNetworkById,
   getEscrowProposalById,
   fetchRequestEscrowProposalsByProvider,
+  updateEscrowProposal,
 } = require('../adapters/collarAPI')
 const {
   getEscrowTermsBySettings,
@@ -59,8 +60,31 @@ async function generateEscrowProposal(offer) {
   }
 }
 
-// Work in progress
-// will need help from Carlos
+
+async function reproposeEscrowProposal(offer) {
+  if (!LENDER_BOT_ACTIVE) return
+  try {
+
+    const terms = await getEscrowTermsBySettings(offer) // here's where the configurable callback logic would come in
+    const response = await updateEscrowProposal(
+      offer.id,
+      offer.acceptedEscrowProposalId,
+      offer.networkId,
+      terms.interestAPR,
+      terms.lateFeeAPR,
+      terms.minEscrow,
+      offer.duration,
+      terms.gracePeriod,
+      terms.deadline
+    )
+    const proposal = response.data
+    console.log(
+      `Reproposed escrow proposal for offer request ${offer.id} with apr ${terms.interestAPR} and late fee APR ${terms.lateFeeAPR} proposal id ${proposal.id}`
+    )
+  } catch (error) {
+    console.error(`Error during reproposing escrow proposal: ${offer.id}`, error)
+  }
+}
 async function executeEscrowProposal(offer) {
   if (!LENDER_BOT_ACTIVE) return
 
@@ -76,12 +100,7 @@ async function executeEscrowProposal(offer) {
       offer.acceptedEscrowProposalId,
       offer.networkId
     )
-    if (offer.ltv < 100) {
-      offer.ltv = offer.ltv * 100
-    }
-    if (offer.duration < 300) {
-      offer.duration = 300
-    }
+
     if (
       acceptedProposal &&
       acceptedProposal.address.toLowerCase() === PROVIDER_ADDRESS.toLowerCase()
@@ -95,8 +114,8 @@ async function executeEscrowProposal(offer) {
       }
 
       if (acceptedProposal.status === 'accepted' && acceptedProposal.deadline < new Date()) {
-        // if accepted and deadline is passed we need to repropose 
-        await generateEscrowProposal(offer)
+        // if accepted and deadline is passed we need to repropose \
+        await reproposeEscrowProposal(offer)
         return
       }
 

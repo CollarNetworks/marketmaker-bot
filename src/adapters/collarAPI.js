@@ -260,6 +260,43 @@ async function createEscrowProposal(
   return await response.json()
 }
 
+async function updateEscrowProposal(requestId, proposalId, networkId,
+  interestAPR,
+  lateFeeAPR,
+  minEscrow,
+  duration,
+  gracePeriod,
+  deadline) {
+  const token = await signAndGetTokenForAuth()
+  const response = await fetch(
+    `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal/${proposalId}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        Environment: process.env.API_ENVIRONMENT,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        address: PROVIDER_ADDRESS,
+        interestAPR,
+        lateFeeAPR,
+        minEscrow,
+        duration,
+        gracePeriod,
+        deadline,
+        escrowSupplierNFTContractAddress,
+        offerRequestId,
+        status: 'proposed',
+      }),
+    }
+  )
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  return await response.json()
+}
+
 async function fetchRequestEscrowProposalsByProvider(requestId, networkId) {
   const proposalURl = `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal?limit=1000&provider=${PROVIDER_ADDRESS}`
   const token = await signAndGetTokenForAuth()
@@ -449,6 +486,7 @@ module.exports = {
   fetchEscrowSettings,
   getEscrowProposalById,
   createEscrowProposal,
+  updateEscrowProposal,
   fetchRequestEscrowProposalsByProvider,
   markEscrowProposalAsExecuted,
   createCallstrikeProposal,
