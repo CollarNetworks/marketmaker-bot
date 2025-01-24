@@ -59,6 +59,8 @@ async function updateOfferRequests(requestId, body, networkId) {
 // CALLSTRIKE
 //
 
+
+
 // Placeholder till logic is built in API
 async function fetchCallstrikeSettings() {
   const response = new Response(JSON.stringify({}))
@@ -344,26 +346,24 @@ async function markEscrowProposalAsExecuted(
 
 // ROLLS
 //
-async function fetchAcceptedRollOfferProposalsByProvider(
-  providerAddress,
-  networkId
-) {
+
+async function fetchRollOfferProposalsByProvider(providerAddress, networkId) {
   const token = await signAndGetTokenForAuth()
 
-  const response = await fetch(
-    `${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=1000&status=accepted`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `MMBOTBearer ${token}`,
-        Environment: process.env.API_ENVIRONMENT,
-        'Content-Type': 'application/json',
-      },
+  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=1000&showExpired=true`, {
+    method: "GET",
+    headers: {
+      Authorization: `MMBOTBearer ${token}`,
+      'Environment': process.env.API_ENVIRONMENT,
+      'Content-Type': 'application/json',
     }
+  }
   )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
+
+
 async function fetchRollOfferProposalsByPosition(
   providerAddress,
   loansContractAddress,
@@ -372,21 +372,69 @@ async function fetchRollOfferProposalsByPosition(
 ) {
   const token = await signAndGetTokenForAuth()
 
-  const response = await fetch(
-    `${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=2&takerId=${takerId}&loansContractAddress=${loansContractAddress}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `MMBOTBearer ${token}`,
-        Environment: process.env.API_ENVIRONMENT,
-        'Content-Type': 'application/json',
-      },
+  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=2&takerId=${takerId}&loansContractAddress=${loansContractAddress}&showExpired=true`, {
+    method: "GET",
+    headers: {
+      Authorization: `MMBOTBearer ${token}`,
+      'Environment': process.env.API_ENVIRONMENT,
+      'Content-Type': 'application/json',
     }
+  }
   )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
 
+async function createPositionProposal(networkId, positionId, proposalToCreate) {
+  const token = await signAndGetTokenForAuth()
+  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/${positionId}/proposal`, {
+    method: "POST",
+    headers: {
+      Authorization: `MMBOTBearer ${token}`,
+      'Environment': process.env.API_ENVIRONMENT,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...proposalToCreate,
+      providerAddress: PROVIDER_ADDRESS.toLowerCase(),
+      onchainOfferId: null,
+      status: 'proposed',
+      isExecuted: false,
+      isAccepted: false,
+      chainId: networkId,
+      networkId
+    })
+  })
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+  return await response.json()
+}
+
+async function updatePositionProposal(networkId, proposalId, proposalToUpdate) {
+  const token = await signAndGetTokenForAuth()
+  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/proposal/${proposalId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `MMBOTBearer ${token}`,
+      'Environment': process.env.API_ENVIRONMENT,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...proposalToUpdate,
+      providerAddress: PROVIDER_ADDRESS.toLowerCase(),
+      chainId: networkId,
+      networkId
+    })
+  })
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+  return await response.json()
+
+}
+
+
+
+
+// POSITION
+//
 async function getPositionsByProvider(networkId) {
   const token = await signAndGetTokenForAuth()
 
@@ -404,9 +452,6 @@ async function getPositionsByProvider(networkId) {
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
-
-// POSITION
-//
 
 async function createPositionProposal(networkId, positionId, proposalToCreate) {
   const token = await signAndGetTokenForAuth()
@@ -434,6 +479,19 @@ async function createPositionProposal(networkId, positionId, proposalToCreate) {
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
+async function getPositionById(networkId, positionId) {
+  const token = await signAndGetTokenForAuth()
+  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/${positionId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `MMBOTBearer ${token}`,
+      'Environment': process.env.API_ENVIRONMENT,
+      'Content-Type': 'application/json',
+    }
+  })
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+  return await response.json()
+}
 
 // NETWORK
 //
@@ -453,7 +511,6 @@ async function getAssetPair(networkId, underlyingAddress, cashAssetAddress) {
 }
 
 // OFFERS (ONCHAIN)
-//
 
 async function getOffersByProviderAndStatus(
   networkId,
@@ -473,10 +530,12 @@ async function getOffersByProviderAndStatus(
       },
     }
   )
-
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
+
+
+
 
 module.exports = {
   fetchOfferRequests,
@@ -492,12 +551,15 @@ module.exports = {
   createCallstrikeProposal,
   markProposalAsExecuted,
   markRollOfferProposalAsExecuted,
-  fetchAcceptedRollOfferProposalsByProvider,
+  fetchRollOfferProposalsByProvider,
   fetchRollOfferProposalsByPosition,
   fetchRequestProposalsByProvider,
   getNetworkById,
   getAssetPair,
+  getPositionById,
   getPositionsByProvider,
   createPositionProposal,
   getOffersByProviderAndStatus,
+  updatePositionProposal,
+  getOffersByProviderAndStatus
 }

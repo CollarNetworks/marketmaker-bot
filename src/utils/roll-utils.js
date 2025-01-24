@@ -1,3 +1,5 @@
+const { updatePositionProposal, getNetworkById, getAssetPair } = require('../adapters/collarAPI')
+const { getCurrentPrice } = require('../adapters/collarProtocol')
 const { BIPS_BASE } = require('../constants')
 async function getProposalTermsByPosition(
   position,
@@ -27,6 +29,29 @@ async function getProposalTermsByPosition(
   }
 }
 
+
+async function handleUpdatePositionProposal(position, proposalId, networkId) {
+  const { data: network } = await getNetworkById(networkId)
+  const rpcUrl = network.rpcUrl
+  const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
+  const oracleContractAddress = position.pairedPosition.collarTakerNFT.oracle
+  const rollsContractAddress = pair.rollsContractAddress
+  const price = await getCurrentPrice(rpcUrl, oracleContractAddress)
+  let proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
+  const proposalUpdate = {
+    ...proposalToCreate,
+    isExecuted: false,
+    isAccepted: false,
+    status: 'proposed',
+  }
+  const response = await updatePositionProposal(network.id, proposalId, proposalUpdate);
+  const proposal = response.data;
+  return proposal
+}
+
+
+
 module.exports = {
   getProposalTermsByPosition,
+  handleUpdatePositionProposal,
 }

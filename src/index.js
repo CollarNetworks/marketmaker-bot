@@ -2,8 +2,10 @@ require('dotenv').config()
 const { processRequests } = require('./services/request-service')
 const {
   generateRollOfferProposal,
-  processAcceptedRollOfferProposals,
-  executeRollOffer,
+  processRollOfferProposals,
+  handleOnchainRollOfferProposals,
+  handleProposedRollOfferProposals,
+  handleAcceptedRollOfferProposals,
 } = require('./services/roll-service')
 const { processOpenPositions } = require('./services/position-service')
 // const { processOnchainOffers, cancelOnchainOffer } = require('./services/offer-service')
@@ -36,7 +38,9 @@ async function poll() {
 
   // Roll
   await processOpenPositions([generateRollOfferProposal])
-  await processAcceptedRollOfferProposals([executeRollOffer])
+  await processRollOfferProposals([handleAcceptedRollOfferProposals,
+    handleProposedRollOfferProposals,
+    handleOnchainRollOfferProposals])
 
   // await processOnchainOffers([cancelOnchainOffer]) // delete all onchain offers from this provider (cleanup method)
 

@@ -140,6 +140,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
       providerNFTId
     )
     await approvalTX.wait()
+
     // Create roll offer on-chain
     const tx = await rollsContract.createOffer(
       takerId,
@@ -167,7 +168,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
     console.log({ rollId })
     return rollId
   } catch (error) {
-    console.error('Error creating roll offer on-chain:', error)
+    console.error(`Error creating roll offer on-chain for proposal ${proposal.id} and takerId ${proposal.takerId} on loans ${proposal.loansContractAddress}:`, error)
     throw error
   }
 }
@@ -234,6 +235,51 @@ async function createOnchainEscrowOffer(
   }
   const offerId = offerCreatedEvent.args.offerId
   return offerId
+}
+
+async function cancelOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl) {
+  try {
+    // Get wallet instance
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    // Get contract instance
+    const rollsContract = await getContractInstance(
+      rpcUrl,
+      rollsContractAddress,
+      ROLLS_ABI,
+      wallet
+    )
+
+    const tx = await rollsContract.cancelOffer(rollOfferId)
+    const receipt = await tx.wait()
+    const events = await parseReceipt(receipt, rollsContract)
+    const offerCancelledEvent = events.find(
+      (event) => event.name === 'OfferCancelled'
+    )
+    if (!offerCancelledEvent) {
+      throw new Error('OfferCancelled event not found in the transaction receipt)')
+    }
+    return true
+  } catch (e) {
+    console.log(`error cancelling roll offer id: ${rollOfferId} `, e)
+    throw e
+  }
+}
+
+async function getOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl) {
+  try {
+    const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+    const rollsContract = await getContractInstance(
+      rpcUrl,
+      rollsContractAddress,
+      ROLLS_ABI,
+      wallet
+    )
+    const rollOffer = await rollsContract.getRollOffer(rollOfferId)
+    return rollOffer
+  } catch (e) {
+    console.log("error getting roll offer, ", e)
+    throw e
+  }
 }
 
 async function getTakerNFTContractAddressByLoansContractAddress(
@@ -320,7 +366,7 @@ async function cancelOnchainOffer(offerId, providerNFTContractAddress, rpcUrl) {
 
     return true
   } catch (e) {
-    console.log("error cancelling offer, ", e)
+    console.log(`error cancelling offer, ${offerId} `, e)
     throw e
   }
 }
@@ -329,8 +375,10 @@ async function cancelOnchainOffer(offerId, providerNFTContractAddress, rpcUrl) {
 module.exports = {
   getProviderLockedCashFromOracleAndTerms,
   createOnchainOffer,
+  cancelOnchainOffer,
   createOnchainRollOffer,
   createOnchainEscrowOffer,
+  getOnchainRollOffer,
   getCurrentPrice,
-  cancelOnchainOffer
+  cancelOnchainRollOffer
 }

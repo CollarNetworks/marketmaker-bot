@@ -14,6 +14,8 @@ const LENDER_BOT_ACTIVE = process.env.LENDER_BOT_ACTIVE || true
 // Cache settings
 const CACHE_REFRESH_INTERVAL = 15 * 60 * 1000 // 15 minutes in milliseconds
 
+const MIN_CALLSTRIKE = process.env.MIN_CALLSTRIKE || 10800
+const MAX_CALLSTRIKE = process.env.MAX_CALLSTRIKE || 11600
 module.exports = {
   RPC_URL,
   API_BASE_URL,
@@ -27,4 +29,6 @@ module.exports = {
   PROVIDER_BOT_ACTIVE,
   LENDER_BOT_ACTIVE,
   CACHE_REFRESH_INTERVAL,
+  MIN_CALLSTRIKE,
+  MAX_CALLSTRIKE
 }
