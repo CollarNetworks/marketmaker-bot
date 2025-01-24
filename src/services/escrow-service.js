@@ -60,11 +60,9 @@ async function generateEscrowProposal(offer) {
   }
 }
 
-
 async function reproposeEscrowProposal(offer) {
   if (!LENDER_BOT_ACTIVE) return
   try {
-
     const terms = await getEscrowTermsBySettings(offer) // here's where the configurable callback logic would come in
     const response = await updateEscrowProposal(
       offer.id,
@@ -82,17 +80,16 @@ async function reproposeEscrowProposal(offer) {
       `Reproposed escrow proposal for offer request ${offer.id} with apr ${terms.interestAPR} and late fee APR ${terms.lateFeeAPR} proposal id ${proposal.id}`
     )
   } catch (error) {
-    console.error(`Error during reproposing escrow proposal: ${offer.id}`, error)
+    console.error(
+      `Error during reproposing escrow proposal: ${offer.id}`,
+      error
+    )
   }
 }
 async function executeEscrowProposal(offer) {
   if (!LENDER_BOT_ACTIVE) return
 
-  if (
-    offer.acceptedEscrowProposalId === null ||
-    offer.acceptedEscrowProposalId === undefined
-  )
-    return
+  if (!offer.acceptedEscrowProposalId) return
 
   try {
     const { data: acceptedProposal } = await getEscrowProposalById(
@@ -107,13 +104,14 @@ async function executeEscrowProposal(offer) {
     ) {
       // avoid proposal duplication
       // if already onchain or expired skip
-      if (
-        acceptedProposal.status === 'offerCreated'
-      ) {
+      if (acceptedProposal.status === 'offerCreated') {
         return
       }
 
-      if (acceptedProposal.status === 'accepted' && acceptedProposal.deadline < new Date()) {
+      if (
+        acceptedProposal.status === 'accepted' &&
+        acceptedProposal.deadline < new Date()
+      ) {
         // if accepted and deadline is passed we need to repropose \
         await reproposeEscrowProposal(offer)
         return
@@ -141,9 +139,6 @@ async function executeEscrowProposal(offer) {
     console.error(`Error during processing accepted: ${offer.id}`, error)
   }
 }
-
-
-
 
 module.exports = {
   generateEscrowProposal,
