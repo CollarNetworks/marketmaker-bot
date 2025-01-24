@@ -28,10 +28,11 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
 async function poll() {
   // RFQ
   await processRequests('open', [
-    executeEscrowProposal
+    generateCallstrikeProposal,
+    generateEscrowProposal
   ])
+  await processRequests('acceptedEscrow', [executeEscrowProposal])
   await processRequests('accepted', [executeCallstrikeProposal])
-  // await processRequests('acceptedEscrow', [executeEscrowProposal])
 
   // Roll
   await processOpenPositions([generateRollOfferProposal])
