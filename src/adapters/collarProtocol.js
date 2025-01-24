@@ -6,6 +6,7 @@ const { ROLLS_ABI } = require('../constants/abi/Rolls')
 const { LOANS_ABI } = require('../constants/abi/Loans')
 const { getContractInstance, getWalletInstance } = require('./ethers')
 const { ORACLE_ABI } = require('../constants/abi/Oracle')
+const { ESCROW_NFT_ABI } = require('../constants/abi/EscrowSupplierNFT')
 async function parseReceipt(receipt, contract) {
   if (receipt.logs && receipt.logs.length > 0) {
     const parsedLogs = receipt.logs
@@ -172,6 +173,70 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
   }
 }
 
+async function createOnchainEscrowOffer(
+  escrowSupplierNFTContractAddress,
+  amount,
+  duration,
+  interestAPR,
+  gracePeriod,
+  lateFeeAPR,
+  minEscrow,
+  rpcUrl
+) {
+  /**
+   * function createOffer(
+        uint amount,
+        uint duration,
+        uint interestAPR,
+        uint gracePeriod,
+        uint lateFeeAPR,
+        uint minEscrow
+    ) external whenNotPaused returns (uint offerId) {
+   */
+
+  const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
+  const escrowSupplierNFTContract = await getContractInstance(
+    rpcUrl,
+    escrowSupplierNFTContractAddress,
+    ESCROW_NFT_ABI,
+    wallet
+  )
+
+  const assetAddress = await escrowSupplierNFTContract.asset()
+  const assetContract = await getContractInstance(
+    rpcUrl,
+    assetAddress,
+    ERC20_ABI,
+    wallet
+  )
+
+  const approvalTX = await assetContract.approve(
+    escrowSupplierNFTContractAddress,
+    amount
+  )
+  await approvalTX.wait()
+
+  const tx = await escrowSupplierNFTContract.createOffer(
+    amount,
+    duration,
+    interestAPR,
+    gracePeriod,
+    lateFeeAPR,
+    minEscrow,
+  )
+
+  const receipt = await tx.wait()
+  const events = await parseReceipt(receipt, escrowSupplierNFTContract)
+  const offerCreatedEvent = events.find(
+    (event) => event.name === 'OfferCreated'
+  )
+  if (!offerCreatedEvent) {
+    throw new Error('OfferCreated event not found in the transaction receipt)')
+  }
+  const offerId = offerCreatedEvent.args.offerId
+  return offerId
+}
+
 async function cancelOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl) {
   try {
     // Get wallet instance
@@ -312,6 +377,7 @@ module.exports = {
   createOnchainOffer,
   cancelOnchainOffer,
   createOnchainRollOffer,
+  createOnchainEscrowOffer,
   getOnchainRollOffer,
   getCurrentPrice,
   cancelOnchainRollOffer
