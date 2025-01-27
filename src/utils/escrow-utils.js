@@ -7,11 +7,7 @@ let lastCacheTime = null
 
 // Work in progress
 // will need help from Carlos
-async function executeOnchainEscrowOffer(
-  escrowProposal,
-  amount,
-  rpcUrl
-) {
+async function executeOnchainEscrowOffer(escrowProposal, amount, rpcUrl) {
   const offerId = await createOnchainEscrowOffer(
     escrowProposal.escrowSupplierNFTContractAddress,
     amount,
@@ -34,7 +30,6 @@ async function getEscrowSettings() {
     lastCacheTime &&
     now - lastCacheTime < CACHE_REFRESH_INTERVAL
   ) {
-    console.log('Using cached escrow settings')
     return settingsCache
   }
 
@@ -44,13 +39,16 @@ async function getEscrowSettings() {
     minEscrow: 1,
     gracePeriod: 7 * 3600 * 24,
     deadline: new Date(),
-    escrowSupplierNFTContractAddress: '0x528fa3cc2c35b701a870d74601e0f24bb38231d0',
+    escrowSupplierNFTContractAddress:
+      '0x528fa3cc2c35b701a870d74601e0f24bb38231d0',
     deadlineMinutes: DEADLINE_MINUTES,
   }
 
   const defaultEscrowContracts = {
-    "0xf17eb654885afece15039a9aa26f91063cc693e0:0x69fc9d4d59843c6e55f00b5f66b263c963214c53": "0x528fa3cc2c35b701a870d74601e0f24bb38231d0",
-    "0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53": "0x14a2600fa25bdd5ba922715ac2bcc897062efc5f",
+    '0xf17eb654885afece15039a9aa26f91063cc693e0:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
+      '0x528fa3cc2c35b701a870d74601e0f24bb38231d0',
+    '0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
+      '0x14a2600fa25bdd5ba922715ac2bcc897062efc5f',
   }
 
   try {
@@ -64,17 +62,14 @@ async function getEscrowSettings() {
         console.log({ contractAddress })
         prev[assetPair] = {
           ...curr,
-          interestAPR:
-            curr.interestAPR || defaultSettings.interestAPR,
+          interestAPR: curr.interestAPR || defaultSettings.interestAPR,
           lateFeeAPR: curr.lateFeeAPR || defaultSettings.lateFeeAPR,
           deadlineMinutes:
             curr.deadlineMinutes || defaultSettings.deadlineMinutes,
           minEscrow: curr.minEscrow || defaultSettings.minEscrow,
           gracePeriod: curr.gracePeriod || defaultSettings.gracePeriod,
           escrowSupplierNFTContractAddress:
-            curr.escrowSupplierNFTContractAddress ||
-            contractAddress,
-
+            curr.escrowSupplierNFTContractAddress || contractAddress,
         }
         return prev
       }, {})
