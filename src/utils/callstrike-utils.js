@@ -69,7 +69,6 @@ async function getCallstrikeSettings() {
     lastCacheTime &&
     now - lastCacheTime < CACHE_REFRESH_INTERVAL
   ) {
-    console.log('Using cached callstrike settings')
     return settingsCache
   }
 

@@ -59,8 +59,6 @@ async function updateOfferRequests(requestId, body, networkId) {
 // CALLSTRIKE
 //
 
-
-
 // Placeholder till logic is built in API
 async function fetchCallstrikeSettings() {
   const response = new Response(JSON.stringify({}))
@@ -262,13 +260,17 @@ async function createEscrowProposal(
   return await response.json()
 }
 
-async function updateEscrowProposal(requestId, proposalId, networkId,
+async function updateEscrowProposal(
+  requestId,
+  proposalId,
+  networkId,
   interestAPR,
   lateFeeAPR,
   minEscrow,
   duration,
   gracePeriod,
-  deadline) {
+  deadline
+) {
   const token = await signAndGetTokenForAuth()
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal/${proposalId}`,
@@ -350,19 +352,20 @@ async function markEscrowProposalAsExecuted(
 async function fetchRollOfferProposalsByProvider(providerAddress, networkId) {
   const token = await signAndGetTokenForAuth()
 
-  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=1000&showExpired=true`, {
-    method: "GET",
-    headers: {
-      Authorization: `MMBOTBearer ${token}`,
-      'Environment': process.env.API_ENVIRONMENT,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=1000&showExpired=true`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        Environment: process.env.API_ENVIRONMENT,
+        'Content-Type': 'application/json',
+      },
     }
-  }
   )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
-
 
 async function fetchRollOfferProposalsByPosition(
   providerAddress,
@@ -372,14 +375,16 @@ async function fetchRollOfferProposalsByPosition(
 ) {
   const token = await signAndGetTokenForAuth()
 
-  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=2&takerId=${takerId}&loansContractAddress=${loansContractAddress}&showExpired=true`, {
-    method: "GET",
-    headers: {
-      Authorization: `MMBOTBearer ${token}`,
-      'Environment': process.env.API_ENVIRONMENT,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=2&takerId=${takerId}&loansContractAddress=${loansContractAddress}&showExpired=true`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        Environment: process.env.API_ENVIRONMENT,
+        'Content-Type': 'application/json',
+      },
     }
-  }
   )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
@@ -387,51 +392,53 @@ async function fetchRollOfferProposalsByPosition(
 
 async function createPositionProposal(networkId, positionId, proposalToCreate) {
   const token = await signAndGetTokenForAuth()
-  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/${positionId}/proposal`, {
-    method: "POST",
-    headers: {
-      Authorization: `MMBOTBearer ${token}`,
-      'Environment': process.env.API_ENVIRONMENT,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...proposalToCreate,
-      providerAddress: PROVIDER_ADDRESS.toLowerCase(),
-      onchainOfferId: null,
-      status: 'proposed',
-      isExecuted: false,
-      isAccepted: false,
-      chainId: networkId,
-      networkId
-    })
-  })
+  const response = await fetch(
+    `${API_BASE_URL}/network/${networkId}/position/${positionId}/proposal`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        Environment: process.env.API_ENVIRONMENT,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...proposalToCreate,
+        providerAddress: PROVIDER_ADDRESS.toLowerCase(),
+        onchainOfferId: null,
+        status: 'proposed',
+        isExecuted: false,
+        isAccepted: false,
+        chainId: networkId,
+        networkId,
+      }),
+    }
+  )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
 
 async function updatePositionProposal(networkId, proposalId, proposalToUpdate) {
   const token = await signAndGetTokenForAuth()
-  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/proposal/${proposalId}`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `MMBOTBearer ${token}`,
-      'Environment': process.env.API_ENVIRONMENT,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...proposalToUpdate,
-      providerAddress: PROVIDER_ADDRESS.toLowerCase(),
-      chainId: networkId,
-      networkId
-    })
-  })
+  const response = await fetch(
+    `${API_BASE_URL}/network/${networkId}/position/proposal/${proposalId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        Environment: process.env.API_ENVIRONMENT,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...proposalToUpdate,
+        providerAddress: PROVIDER_ADDRESS.toLowerCase(),
+        chainId: networkId,
+        networkId,
+      }),
+    }
+  )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
-
 }
-
-
-
 
 // POSITION
 //
@@ -481,14 +488,17 @@ async function createPositionProposal(networkId, positionId, proposalToCreate) {
 }
 async function getPositionById(networkId, positionId) {
   const token = await signAndGetTokenForAuth()
-  const response = await fetch(`${API_BASE_URL}/network/${networkId}/position/${positionId}`, {
-    method: "GET",
-    headers: {
-      Authorization: `MMBOTBearer ${token}`,
-      'Environment': process.env.API_ENVIRONMENT,
-      'Content-Type': 'application/json',
+  const response = await fetch(
+    `${API_BASE_URL}/network/${networkId}/position/${positionId}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `MMBOTBearer ${token}`,
+        Environment: process.env.API_ENVIRONMENT,
+        'Content-Type': 'application/json',
+      },
     }
-  })
+  )
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
@@ -519,7 +529,8 @@ async function getOffersByProviderAndStatus(
 ) {
   const token = await signAndGetTokenForAuth()
   const response = await fetch(
-    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${status ? `&status=${status}` : ''
+    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${
+      status ? `&status=${status}` : ''
     }`,
     {
       method: 'GET',
@@ -533,9 +544,6 @@ async function getOffersByProviderAndStatus(
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
-
-
-
 
 module.exports = {
   fetchOfferRequests,
@@ -561,5 +569,5 @@ module.exports = {
   createPositionProposal,
   getOffersByProviderAndStatus,
   updatePositionProposal,
-  getOffersByProviderAndStatus
+  getOffersByProviderAndStatus,
 }

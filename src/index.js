@@ -18,7 +18,10 @@ const {
   PROVIDER_ADDRESS,
   POLL_INTERVAL_MS,
 } = require('./constants')
-const { generateEscrowProposal, executeEscrowProposal } = require('./services/escrow-service')
+const {
+  generateEscrowProposal,
+  executeEscrowProposal,
+} = require('./services/escrow-service')
 
 if (!API_BASE_URL || !PROVIDER_ADDRESS) {
   console.error(
@@ -30,17 +33,20 @@ if (!API_BASE_URL || !PROVIDER_ADDRESS) {
 async function poll() {
   // RFQ
   await processRequests('open', [
+    generateEscrowProposal,
     generateCallstrikeProposal,
-    generateEscrowProposal
   ])
   await processRequests('acceptedEscrow', [executeEscrowProposal])
+  await processRequests('offerCreatedEscrow', [generateCallstrikeProposal])
   await processRequests('accepted', [executeCallstrikeProposal])
 
   // Roll
   await processOpenPositions([generateRollOfferProposal])
-  await processRollOfferProposals([handleAcceptedRollOfferProposals,
+  await processRollOfferProposals([
+    handleAcceptedRollOfferProposals,
     handleProposedRollOfferProposals,
-    handleOnchainRollOfferProposals])
+    handleOnchainRollOfferProposals,
+  ])
 
   // await processOnchainOffers([cancelOnchainOffer]) // delete all onchain offers from this provider (cleanup method)
 

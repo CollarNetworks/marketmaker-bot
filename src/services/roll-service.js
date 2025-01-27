@@ -7,13 +7,19 @@ const {
   fetchRollOfferProposalsByProvider,
   getPositionById,
 } = require('../adapters/collarAPI')
-const { createOnchainRollOffer, getOnchainRollOffer } = require('../adapters/collarProtocol')
-const { getProposalTermsByPosition, handleUpdatePositionProposal } = require('../utils/roll-utils')
+const {
+  createOnchainRollOffer,
+  getOnchainRollOffer,
+  cancelOnchainRollOffer,
+} = require('../adapters/collarProtocol')
+const {
+  getProposalTermsByPosition,
+  handleUpdatePositionProposal,
+} = require('../utils/roll-utils')
 const { getCurrentPrice } = require('../adapters/collarProtocol')
 const { PROVIDER_ADDRESS, CHAIN_ID, MAX_RETRIES } = require('../constants')
 
 const rollTries = {}
-
 
 async function handleAcceptedRollOfferProposals(proposal) {
   if (proposal.status === 'accepted') {
@@ -30,10 +36,7 @@ async function handleAcceptedRollOfferProposals(proposal) {
         }
         const { data: network } = await getNetworkById(proposal.networkId)
         const rpcUrl = network.rpcUrl
-        const onchainRollOffer = await createOnchainRollOffer(
-          proposal,
-          rpcUrl
-        )
+        const onchainRollOffer = await createOnchainRollOffer(proposal, rpcUrl)
         await markRollOfferProposalAsExecuted(
           proposal.id,
           onchainRollOffer.toString(),
@@ -48,23 +51,32 @@ async function handleAcceptedRollOfferProposals(proposal) {
         handleAcceptedRollOfferProposals(proposal)
       }
     } else {
-      // if proposal is accepted but expired , repropose 
+      // if proposal is accepted but expired , repropose
       try {
         const positionId = `${proposal.loansContractAddress}-${proposal.takerId}`
-        const { data: position } = await getPositionById(proposal.networkId, positionId)
-        await handleUpdatePositionProposal(position, proposal.id, proposal.networkId)
+        const { data: position } = await getPositionById(
+          proposal.networkId,
+          positionId
+        )
+        await handleUpdatePositionProposal(
+          position,
+          proposal.id,
+          proposal.networkId
+        )
         console.log(
           `Reproposed accepted position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
         )
       } catch (e) {
-        console.log(`error reproposing expired proposal ${proposal.id} for takerId ${proposal.takerId}`, e)
+        console.log(
+          `error reproposing expired proposal ${proposal.id} for takerId ${proposal.takerId}`,
+          e
+        )
         rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
         return
       }
     }
   }
 }
-
 
 async function handleProposedRollOfferProposals(proposal) {
   if (proposal.status === 'proposed') {
@@ -80,13 +92,23 @@ async function handleProposedRollOfferProposals(proposal) {
       }
       try {
         const positionId = `${proposal.loansContractAddress}-${proposal.takerId}`
-        const { data: position } = await getPositionById(proposal.networkId, positionId)
-        await handleUpdatePositionProposal(position, proposal.id, proposal.networkId)
+        const { data: position } = await getPositionById(
+          proposal.networkId,
+          positionId
+        )
+        await handleUpdatePositionProposal(
+          position,
+          proposal.id,
+          proposal.networkId
+        )
         console.log(
           `Reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
         )
       } catch (e) {
-        console.log(`error reproposing expired proposal ${proposal.id} for takerId ${proposal.takerId}`, e)
+        console.log(
+          `error reproposing expired proposal ${proposal.id} for takerId ${proposal.takerId}`,
+          e
+        )
         rollTries[proposal.id] = rollTries[proposal.id] + 1 || 1
         handleProposedRollOfferProposals(proposal)
       }
@@ -109,17 +131,34 @@ async function handleOnchainRollOfferProposals(proposal) {
         }
         const { data: network } = await getNetworkById(proposal.networkId)
         const rpcUrl = network.rpcUrl
-        const onchainOffer = await getOnchainRollOffer(proposal.onchainOfferId, proposal.rollsContractAddress, rpcUrl)
+        const onchainOffer = await getOnchainRollOffer(
+          proposal.onchainOfferId,
+          proposal.rollsContractAddress,
+          rpcUrl
+        )
         const onchainDeadline = new Date(Number(onchainOffer.deadline) * 1000)
         if (onchainDeadline < new Date() && onchainOffer.active) {
-          const success = await cancelOnchainRollOffer(proposal.onchainOfferId, proposal.rollsContractAddress, rpcUrl)
+          const success = await cancelOnchainRollOffer(
+            proposal.onchainOfferId,
+            proposal.rollsContractAddress,
+            rpcUrl
+          )
           if (success) {
-            console.log(`Successfully cancelled onchain roll offer ${proposal.onchainOfferId}`)
+            console.log(
+              `Successfully cancelled onchain roll offer ${proposal.onchainOfferId}`
+            )
           }
           const positionId = `${proposal.loansContractAddress}-${proposal.takerId}`
 
-          const { data: position } = await getPositionById(proposal.networkId, positionId)
-          await handleUpdatePositionProposal(position, proposal.id, proposal.networkId)
+          const { data: position } = await getPositionById(
+            proposal.networkId,
+            positionId
+          )
+          await handleUpdatePositionProposal(
+            position,
+            proposal.id,
+            proposal.networkId
+          )
           console.log(
             `Cancelled onchain and reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
           )
@@ -132,7 +171,6 @@ async function handleOnchainRollOfferProposals(proposal) {
     }
   }
 }
-
 
 async function processRollOfferProposals(plugins = []) {
   if (plugins.length === 0) {
@@ -210,8 +248,6 @@ async function generateRollOfferProposal(position) {
   }
 }
 
-
-
 module.exports = {
   generateRollOfferProposal,
   handleAcceptedRollOfferProposals,
@@ -219,4 +255,3 @@ module.exports = {
   handleOnchainRollOfferProposals,
   processRollOfferProposals,
 }
-
