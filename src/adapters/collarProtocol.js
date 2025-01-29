@@ -127,6 +127,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
     )
     const [providerNFTContractAddress, providerNFTId] =
       await takerContract.getPosition(takerId)
+
     // approve provider id to rolls
     const providerNFTContract = await getContractInstance(
       rpcUrl,
@@ -296,7 +297,7 @@ async function getTakerNFTContractAddressByLoansContractAddress(
 }
 
 async function getProviderLockedCashFromOracleAndTerms(
-  oracleAddress,
+  providerNFTContractAddress,
   collateralAmount,
   callStrike,
   putStrike,
@@ -308,29 +309,21 @@ async function getProviderLockedCashFromOracleAndTerms(
     process.env.PRIVATE_KEY
   )
   // Get contract instance
-  const oracleContract = await getContractInstance(
+  const providerNFTContract = await getContractInstance(
     rpcUrl,
-    oracleAddress,
-    ORACLE_ABI,
+    providerNFTContractAddress,
+    PROVIDER_NFT_ABI,
     wallet
   )
-  const price = await oracleContract.currentPrice()
-  console.log({ price, collateralAmount })
-  const fullCashAmount = await oracleContract.convertToQuoteAmount(
-    collateralAmount,
-    price
+  const taker = await providerNFTContract.taker();
+  const takerNFTContract = await getContractInstance(
+    rpcUrl,
+    taker, // need to get this address
+    TAKER_NFT_ABI,
+    wallet
   )
-  console.log({ fullCashAmount })
-  // First calculate taker's locked amount
-  const loanAmount = (fullCashAmount * BigInt(putStrike)) / BigInt(BIPS_BASE);
-  const takerLocked = fullCashAmount - loanAmount;
-
-  // Then calculate provider's locked amount
-  const putRange = BigInt(BIPS_BASE) - BigInt(putStrike);
-  const callRange = BigInt(callStrike) - BigInt(BIPS_BASE);
-  const providerLocked = (takerLocked * callRange) / putRange;
+  const providerLocked = await takerNFTContract.calculateProviderLocked(takerLocked, putStrike, callStrike)
   return providerLocked
-
 }
 
 async function getCurrentPrice(rpcUrl, oracleAddress) {
