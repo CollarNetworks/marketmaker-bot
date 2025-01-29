@@ -1,4 +1,605 @@
-const ROLLS_ABI = [{ "inputs": [{ "internalType": "address", "name": "initialOwner", "type": "address" }, { "internalType": "contract CollarTakerNFT", "name": "_takerNFT", "type": "address" }], "stateMutability": "nonpayable", "type": "constructor" }, { "inputs": [{ "internalType": "address", "name": "target", "type": "address" }], "name": "AddressEmptyCode", "type": "error" }, { "inputs": [{ "internalType": "address", "name": "account", "type": "address" }], "name": "AddressInsufficientBalance", "type": "error" }, { "inputs": [], "name": "EnforcedPause", "type": "error" }, { "inputs": [], "name": "ExpectedPause", "type": "error" }, { "inputs": [], "name": "FailedInnerCall", "type": "error" }, { "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }], "name": "OwnableInvalidOwner", "type": "error" }, { "inputs": [{ "internalType": "address", "name": "account", "type": "address" }], "name": "OwnableUnauthorizedAccount", "type": "error" }, { "inputs": [{ "internalType": "uint8", "name": "bits", "type": "uint8" }, { "internalType": "int256", "name": "value", "type": "int256" }], "name": "SafeCastOverflowedIntDowncast", "type": "error" }, { "inputs": [{ "internalType": "uint8", "name": "bits", "type": "uint8" }, { "internalType": "uint256", "name": "value", "type": "uint256" }], "name": "SafeCastOverflowedUintDowncast", "type": "error" }, { "inputs": [{ "internalType": "uint256", "name": "value", "type": "uint256" }], "name": "SafeCastOverflowedUintToInt", "type": "error" }, { "inputs": [{ "internalType": "address", "name": "token", "type": "address" }], "name": "SafeERC20FailedOperation", "type": "error" }, { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "contract ConfigHub", "name": "previousConfigHub", "type": "address" }, { "indexed": false, "internalType": "contract ConfigHub", "name": "newConfigHub", "type": "address" }], "name": "ConfigHubUpdated", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "uint256", "name": "rollId", "type": "uint256" }, { "indexed": true, "internalType": "uint256", "name": "takerId", "type": "uint256" }, { "indexed": true, "internalType": "address", "name": "provider", "type": "address" }], "name": "OfferCancelled", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "provider", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "rollId", "type": "uint256" }, { "components": [{ "internalType": "contract CollarProviderNFT", "name": "providerNFT", "type": "address" }, { "internalType": "uint64", "name": "providerId", "type": "uint64" }, { "internalType": "uint32", "name": "deadline", "type": "uint32" }, { "internalType": "uint64", "name": "takerId", "type": "uint64" }, { "internalType": "int24", "name": "feeDeltaFactorBIPS", "type": "int24" }, { "internalType": "bool", "name": "active", "type": "bool" }, { "internalType": "address", "name": "provider", "type": "address" }, { "internalType": "int256", "name": "feeAmount", "type": "int256" }, { "internalType": "uint256", "name": "feeReferencePrice", "type": "uint256" }, { "internalType": "uint256", "name": "minPrice", "type": "uint256" }, { "internalType": "uint256", "name": "maxPrice", "type": "uint256" }, { "internalType": "int256", "name": "minToProvider", "type": "int256" }], "indexed": false, "internalType": "struct IRolls.RollOfferStored", "name": "offer", "type": "tuple" }], "name": "OfferCreated", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "uint256", "name": "rollId", "type": "uint256" }, { "indexed": false, "internalType": "int256", "name": "toTaker", "type": "int256" }, { "indexed": false, "internalType": "int256", "name": "toProvider", "type": "int256" }, { "indexed": false, "internalType": "int256", "name": "rollFee", "type": "int256" }, { "indexed": false, "internalType": "uint256", "name": "newTakerId", "type": "uint256" }, { "indexed": false, "internalType": "uint256", "name": "newProviderId", "type": "uint256" }], "name": "OfferExecuted", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" }], "name": "OwnershipTransferStarted", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" }], "name": "OwnershipTransferred", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "address", "name": "account", "type": "address" }], "name": "Paused", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "address", "name": "guardian", "type": "address" }], "name": "PausedByGuardian", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "address", "name": "tokenContract", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "TokensRescued", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": false, "internalType": "address", "name": "account", "type": "address" }], "name": "Unpaused", "type": "event" }, { "inputs": [], "name": "VERSION", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "acceptOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "components": [{ "internalType": "uint256", "name": "takerId", "type": "uint256" }, { "internalType": "int256", "name": "feeAmount", "type": "int256" }, { "internalType": "int256", "name": "feeDeltaFactorBIPS", "type": "int256" }, { "internalType": "uint256", "name": "feeReferencePrice", "type": "uint256" }, { "internalType": "uint256", "name": "minPrice", "type": "uint256" }, { "internalType": "uint256", "name": "maxPrice", "type": "uint256" }, { "internalType": "int256", "name": "minToProvider", "type": "int256" }, { "internalType": "uint256", "name": "deadline", "type": "uint256" }, { "internalType": "contract CollarProviderNFT", "name": "providerNFT", "type": "address" }, { "internalType": "uint256", "name": "providerId", "type": "uint256" }, { "internalType": "address", "name": "provider", "type": "address" }, { "internalType": "bool", "name": "active", "type": "bool" }], "internalType": "struct IRolls.RollOffer", "name": "offer", "type": "tuple" }, { "internalType": "uint256", "name": "price", "type": "uint256" }], "name": "calculateRollFee", "outputs": [{ "internalType": "int256", "name": "rollFee", "type": "int256" }], "stateMutability": "pure", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "rollId", "type": "uint256" }], "name": "cancelOffer", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "cashAsset", "outputs": [{ "internalType": "contract IERC20", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "configHub", "outputs": [{ "internalType": "contract ConfigHub", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "takerId", "type": "uint256" }, { "internalType": "int256", "name": "feeAmount", "type": "int256" }, { "internalType": "int256", "name": "feeDeltaFactorBIPS", "type": "int256" }, { "internalType": "uint256", "name": "minPrice", "type": "uint256" }, { "internalType": "uint256", "name": "maxPrice", "type": "uint256" }, { "internalType": "int256", "name": "minToProvider", "type": "int256" }, { "internalType": "uint256", "name": "deadline", "type": "uint256" }], "name": "createOffer", "outputs": [{ "internalType": "uint256", "name": "rollId", "type": "uint256" }], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "rollId", "type": "uint256" }, { "internalType": "int256", "name": "minToTaker", "type": "int256" }], "name": "executeRoll", "outputs": [{ "internalType": "uint256", "name": "newTakerId", "type": "uint256" }, { "internalType": "uint256", "name": "newProviderId", "type": "uint256" }, { "internalType": "int256", "name": "toTaker", "type": "int256" }, { "internalType": "int256", "name": "toProvider", "type": "int256" }], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "rollId", "type": "uint256" }], "name": "getRollOffer", "outputs": [{ "components": [{ "internalType": "uint256", "name": "takerId", "type": "uint256" }, { "internalType": "int256", "name": "feeAmount", "type": "int256" }, { "internalType": "int256", "name": "feeDeltaFactorBIPS", "type": "int256" }, { "internalType": "uint256", "name": "feeReferencePrice", "type": "uint256" }, { "internalType": "uint256", "name": "minPrice", "type": "uint256" }, { "internalType": "uint256", "name": "maxPrice", "type": "uint256" }, { "internalType": "int256", "name": "minToProvider", "type": "int256" }, { "internalType": "uint256", "name": "deadline", "type": "uint256" }, { "internalType": "contract CollarProviderNFT", "name": "providerNFT", "type": "address" }, { "internalType": "uint256", "name": "providerId", "type": "uint256" }, { "internalType": "address", "name": "provider", "type": "address" }, { "internalType": "bool", "name": "active", "type": "bool" }], "internalType": "struct IRolls.RollOffer", "name": "", "type": "tuple" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "nextRollId", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "pause", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "pauseByGuardian", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "paused", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "pendingOwner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "rollId", "type": "uint256" }, { "internalType": "uint256", "name": "price", "type": "uint256" }], "name": "previewRoll", "outputs": [{ "components": [{ "internalType": "int256", "name": "toTaker", "type": "int256" }, { "internalType": "int256", "name": "toProvider", "type": "int256" }, { "internalType": "int256", "name": "rollFee", "type": "int256" }, { "components": [{ "internalType": "contract CollarProviderNFT", "name": "providerNFT", "type": "address" }, { "internalType": "uint256", "name": "providerId", "type": "uint256" }, { "internalType": "uint256", "name": "duration", "type": "uint256" }, { "internalType": "uint256", "name": "expiration", "type": "uint256" }, { "internalType": "uint256", "name": "startPrice", "type": "uint256" }, { "internalType": "uint256", "name": "putStrikePercent", "type": "uint256" }, { "internalType": "uint256", "name": "callStrikePercent", "type": "uint256" }, { "internalType": "uint256", "name": "takerLocked", "type": "uint256" }, { "internalType": "uint256", "name": "providerLocked", "type": "uint256" }, { "internalType": "bool", "name": "settled", "type": "bool" }, { "internalType": "uint256", "name": "withdrawable", "type": "uint256" }], "internalType": "struct ICollarTakerNFT.TakerPosition", "name": "takerPos", "type": "tuple" }, { "internalType": "uint256", "name": "newTakerLocked", "type": "uint256" }, { "internalType": "uint256", "name": "newProviderLocked", "type": "uint256" }, { "internalType": "uint256", "name": "protocolFee", "type": "uint256" }], "internalType": "struct IRolls.PreviewResults", "name": "", "type": "tuple" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "token", "type": "address" }, { "internalType": "uint256", "name": "amountOrId", "type": "uint256" }, { "internalType": "bool", "name": "isNFT", "type": "bool" }], "name": "rescueTokens", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "contract ConfigHub", "name": "_newConfigHub", "type": "address" }], "name": "setConfigHub", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "takerNFT", "outputs": [{ "internalType": "contract CollarTakerNFT", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "unpause", "outputs": [], "stateMutability": "nonpayable", "type": "function" }]
+const ROLLS_ABI = [
+    {
+        inputs: [
+            { internalType: 'address', name: 'initialOwner', type: 'address' },
+            {
+                internalType: 'contract CollarTakerNFT',
+                name: '_takerNFT',
+                type: 'address',
+            },
+        ],
+        stateMutability: 'nonpayable',
+        type: 'constructor',
+    },
+    {
+        inputs: [{ internalType: 'address', name: 'target', type: 'address' }],
+        name: 'AddressEmptyCode',
+        type: 'error',
+    },
+    {
+        inputs: [{ internalType: 'address', name: 'account', type: 'address' }],
+        name: 'AddressInsufficientBalance',
+        type: 'error',
+    },
+    { inputs: [], name: 'EnforcedPause', type: 'error' },
+    { inputs: [], name: 'ExpectedPause', type: 'error' },
+    { inputs: [], name: 'FailedInnerCall', type: 'error' },
+    {
+        inputs: [{ internalType: 'address', name: 'owner', type: 'address' }],
+        name: 'OwnableInvalidOwner',
+        type: 'error',
+    },
+    {
+        inputs: [{ internalType: 'address', name: 'account', type: 'address' }],
+        name: 'OwnableUnauthorizedAccount',
+        type: 'error',
+    },
+    {
+        inputs: [
+            { internalType: 'uint8', name: 'bits', type: 'uint8' },
+            { internalType: 'int256', name: 'value', type: 'int256' },
+        ],
+        name: 'SafeCastOverflowedIntDowncast',
+        type: 'error',
+    },
+    {
+        inputs: [
+            { internalType: 'uint8', name: 'bits', type: 'uint8' },
+            { internalType: 'uint256', name: 'value', type: 'uint256' },
+        ],
+        name: 'SafeCastOverflowedUintDowncast',
+        type: 'error',
+    },
+    {
+        inputs: [{ internalType: 'uint256', name: 'value', type: 'uint256' }],
+        name: 'SafeCastOverflowedUintToInt',
+        type: 'error',
+    },
+    {
+        inputs: [{ internalType: 'address', name: 'token', type: 'address' }],
+        name: 'SafeERC20FailedOperation',
+        type: 'error',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: false,
+                internalType: 'contract ConfigHub',
+                name: 'previousConfigHub',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                internalType: 'contract ConfigHub',
+                name: 'newConfigHub',
+                type: 'address',
+            },
+        ],
+        name: 'ConfigHubUpdated',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                internalType: 'uint256',
+                name: 'rollId',
+                type: 'uint256',
+            },
+            {
+                indexed: true,
+                internalType: 'uint256',
+                name: 'takerId',
+                type: 'uint256',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'provider',
+                type: 'address',
+            },
+        ],
+        name: 'OfferCancelled',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'provider',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                internalType: 'uint256',
+                name: 'rollId',
+                type: 'uint256',
+            },
+            {
+                components: [
+                    {
+                        internalType: 'contract CollarProviderNFT',
+                        name: 'providerNFT',
+                        type: 'address',
+                    },
+                    { internalType: 'uint64', name: 'providerId', type: 'uint64' },
+                    { internalType: 'uint32', name: 'deadline', type: 'uint32' },
+                    { internalType: 'uint64', name: 'takerId', type: 'uint64' },
+                    { internalType: 'int24', name: 'feeDeltaFactorBIPS', type: 'int24' },
+                    { internalType: 'bool', name: 'active', type: 'bool' },
+                    { internalType: 'address', name: 'provider', type: 'address' },
+                    { internalType: 'int256', name: 'feeAmount', type: 'int256' },
+                    {
+                        internalType: 'uint256',
+                        name: 'feeReferencePrice',
+                        type: 'uint256',
+                    },
+                    { internalType: 'uint256', name: 'minPrice', type: 'uint256' },
+                    { internalType: 'uint256', name: 'maxPrice', type: 'uint256' },
+                    { internalType: 'int256', name: 'minToProvider', type: 'int256' },
+                ],
+                indexed: false,
+                internalType: 'struct IRolls.RollOfferStored',
+                name: 'offer',
+                type: 'tuple',
+            },
+        ],
+        name: 'OfferCreated',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                internalType: 'uint256',
+                name: 'rollId',
+                type: 'uint256',
+            },
+            {
+                indexed: false,
+                internalType: 'int256',
+                name: 'toTaker',
+                type: 'int256',
+            },
+            {
+                indexed: false,
+                internalType: 'int256',
+                name: 'toProvider',
+                type: 'int256',
+            },
+            {
+                indexed: false,
+                internalType: 'int256',
+                name: 'rollFee',
+                type: 'int256',
+            },
+            {
+                indexed: false,
+                internalType: 'uint256',
+                name: 'newTakerId',
+                type: 'uint256',
+            },
+            {
+                indexed: false,
+                internalType: 'uint256',
+                name: 'newProviderId',
+                type: 'uint256',
+            },
+        ],
+        name: 'OfferExecuted',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'previousOwner',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'newOwner',
+                type: 'address',
+            },
+        ],
+        name: 'OwnershipTransferStarted',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'previousOwner',
+                type: 'address',
+            },
+            {
+                indexed: true,
+                internalType: 'address',
+                name: 'newOwner',
+                type: 'address',
+            },
+        ],
+        name: 'OwnershipTransferred',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: false,
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+            },
+        ],
+        name: 'Paused',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: false,
+                internalType: 'address',
+                name: 'guardian',
+                type: 'address',
+            },
+        ],
+        name: 'PausedByGuardian',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: false,
+                internalType: 'address',
+                name: 'tokenContract',
+                type: 'address',
+            },
+            {
+                indexed: false,
+                internalType: 'uint256',
+                name: 'amountOrId',
+                type: 'uint256',
+            },
+        ],
+        name: 'TokensRescued',
+        type: 'event',
+    },
+    {
+        anonymous: false,
+        inputs: [
+            {
+                indexed: false,
+                internalType: 'address',
+                name: 'account',
+                type: 'address',
+            },
+        ],
+        name: 'Unpaused',
+        type: 'event',
+    },
+    {
+        inputs: [],
+        name: 'VERSION',
+        outputs: [{ internalType: 'string', name: '', type: 'string' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'acceptOwnership',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [
+            {
+                components: [
+                    { internalType: 'uint256', name: 'takerId', type: 'uint256' },
+                    { internalType: 'int256', name: 'feeAmount', type: 'int256' },
+                    {
+                        internalType: 'int256',
+                        name: 'feeDeltaFactorBIPS',
+                        type: 'int256',
+                    },
+                    {
+                        internalType: 'uint256',
+                        name: 'feeReferencePrice',
+                        type: 'uint256',
+                    },
+                    { internalType: 'uint256', name: 'minPrice', type: 'uint256' },
+                    { internalType: 'uint256', name: 'maxPrice', type: 'uint256' },
+                    { internalType: 'int256', name: 'minToProvider', type: 'int256' },
+                    { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+                    {
+                        internalType: 'contract CollarProviderNFT',
+                        name: 'providerNFT',
+                        type: 'address',
+                    },
+                    { internalType: 'uint256', name: 'providerId', type: 'uint256' },
+                    { internalType: 'address', name: 'provider', type: 'address' },
+                    { internalType: 'bool', name: 'active', type: 'bool' },
+                ],
+                internalType: 'struct IRolls.RollOffer',
+                name: 'offer',
+                type: 'tuple',
+            },
+            { internalType: 'uint256', name: 'price', type: 'uint256' },
+        ],
+        name: 'calculateRollFee',
+        outputs: [{ internalType: 'int256', name: 'rollFee', type: 'int256' }],
+        stateMutability: 'pure',
+        type: 'function',
+    },
+    {
+        inputs: [{ internalType: 'uint256', name: 'rollId', type: 'uint256' }],
+        name: 'cancelOffer',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'cashAsset',
+        outputs: [{ internalType: 'contract IERC20', name: '', type: 'address' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'configHub',
+        outputs: [
+            { internalType: 'contract ConfigHub', name: '', type: 'address' },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [
+            { internalType: 'uint256', name: 'takerId', type: 'uint256' },
+            { internalType: 'int256', name: 'feeAmount', type: 'int256' },
+            { internalType: 'int256', name: 'feeDeltaFactorBIPS', type: 'int256' },
+            { internalType: 'uint256', name: 'minPrice', type: 'uint256' },
+            { internalType: 'uint256', name: 'maxPrice', type: 'uint256' },
+            { internalType: 'int256', name: 'minToProvider', type: 'int256' },
+            { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+        ],
+        name: 'createOffer',
+        outputs: [{ internalType: 'uint256', name: 'rollId', type: 'uint256' }],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [
+            { internalType: 'uint256', name: 'rollId', type: 'uint256' },
+            { internalType: 'int256', name: 'minToTaker', type: 'int256' },
+        ],
+        name: 'executeRoll',
+        outputs: [
+            { internalType: 'uint256', name: 'newTakerId', type: 'uint256' },
+            { internalType: 'uint256', name: 'newProviderId', type: 'uint256' },
+            { internalType: 'int256', name: 'toTaker', type: 'int256' },
+            { internalType: 'int256', name: 'toProvider', type: 'int256' },
+        ],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [{ internalType: 'uint256', name: 'rollId', type: 'uint256' }],
+        name: 'getRollOffer',
+        outputs: [
+            {
+                components: [
+                    { internalType: 'uint256', name: 'takerId', type: 'uint256' },
+                    { internalType: 'int256', name: 'feeAmount', type: 'int256' },
+                    {
+                        internalType: 'int256',
+                        name: 'feeDeltaFactorBIPS',
+                        type: 'int256',
+                    },
+                    {
+                        internalType: 'uint256',
+                        name: 'feeReferencePrice',
+                        type: 'uint256',
+                    },
+                    { internalType: 'uint256', name: 'minPrice', type: 'uint256' },
+                    { internalType: 'uint256', name: 'maxPrice', type: 'uint256' },
+                    { internalType: 'int256', name: 'minToProvider', type: 'int256' },
+                    { internalType: 'uint256', name: 'deadline', type: 'uint256' },
+                    {
+                        internalType: 'contract CollarProviderNFT',
+                        name: 'providerNFT',
+                        type: 'address',
+                    },
+                    { internalType: 'uint256', name: 'providerId', type: 'uint256' },
+                    { internalType: 'address', name: 'provider', type: 'address' },
+                    { internalType: 'bool', name: 'active', type: 'bool' },
+                ],
+                internalType: 'struct IRolls.RollOffer',
+                name: '',
+                type: 'tuple',
+            },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'nextRollId',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'owner',
+        outputs: [{ internalType: 'address', name: '', type: 'address' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'pause',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'pauseByGuardian',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'paused',
+        outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'pendingOwner',
+        outputs: [{ internalType: 'address', name: '', type: 'address' }],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [
+            { internalType: 'uint256', name: 'rollId', type: 'uint256' },
+            { internalType: 'uint256', name: 'price', type: 'uint256' },
+        ],
+        name: 'previewRoll',
+        outputs: [
+            {
+                components: [
+                    { internalType: 'int256', name: 'toTaker', type: 'int256' },
+                    { internalType: 'int256', name: 'toProvider', type: 'int256' },
+                    { internalType: 'int256', name: 'rollFee', type: 'int256' },
+                    {
+                        components: [
+                            {
+                                internalType: 'contract CollarProviderNFT',
+                                name: 'providerNFT',
+                                type: 'address',
+                            },
+                            { internalType: 'uint256', name: 'providerId', type: 'uint256' },
+                            { internalType: 'uint256', name: 'duration', type: 'uint256' },
+                            { internalType: 'uint256', name: 'expiration', type: 'uint256' },
+                            { internalType: 'uint256', name: 'startPrice', type: 'uint256' },
+                            {
+                                internalType: 'uint256',
+                                name: 'putStrikePercent',
+                                type: 'uint256',
+                            },
+                            {
+                                internalType: 'uint256',
+                                name: 'callStrikePercent',
+                                type: 'uint256',
+                            },
+                            { internalType: 'uint256', name: 'takerLocked', type: 'uint256' },
+                            {
+                                internalType: 'uint256',
+                                name: 'providerLocked',
+                                type: 'uint256',
+                            },
+                            { internalType: 'bool', name: 'settled', type: 'bool' },
+                            {
+                                internalType: 'uint256',
+                                name: 'withdrawable',
+                                type: 'uint256',
+                            },
+                        ],
+                        internalType: 'struct ICollarTakerNFT.TakerPosition',
+                        name: 'takerPos',
+                        type: 'tuple',
+                    },
+                    { internalType: 'uint256', name: 'newTakerLocked', type: 'uint256' },
+                    {
+                        internalType: 'uint256',
+                        name: 'newProviderLocked',
+                        type: 'uint256',
+                    },
+                    { internalType: 'uint256', name: 'protocolFee', type: 'uint256' },
+                ],
+                internalType: 'struct IRolls.PreviewResults',
+                name: '',
+                type: 'tuple',
+            },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'renounceOwnership',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [
+            { internalType: 'address', name: 'token', type: 'address' },
+            { internalType: 'uint256', name: 'amountOrId', type: 'uint256' },
+            { internalType: 'bool', name: 'isNFT', type: 'bool' },
+        ],
+        name: 'rescueTokens',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [
+            {
+                internalType: 'contract ConfigHub',
+                name: '_newConfigHub',
+                type: 'address',
+            },
+        ],
+        name: 'setConfigHub',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'takerNFT',
+        outputs: [
+            { internalType: 'contract CollarTakerNFT', name: '', type: 'address' },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        inputs: [{ internalType: 'address', name: 'newOwner', type: 'address' }],
+        name: 'transferOwnership',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+    {
+        inputs: [],
+        name: 'unpause',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+    },
+]
+
 module.exports = {
     ROLLS_ABI
 }
