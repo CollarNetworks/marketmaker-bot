@@ -65,7 +65,7 @@ async function createOnchainOffer(
        */
     const tx = await providerContract.createOffer(
       callstrike,
-      amount,
+      amount, // @TODO: need to account for protocol fee
       ltv,
       duration,
       10n // minimum 10 wei
@@ -297,7 +297,7 @@ async function getTakerNFTContractAddressByLoansContractAddress(
 }
 
 async function getProviderLockedCashFromOracleAndTerms(
-  providerNFTContractAddress,
+  oracleAddress,
   collateralAmount,
   callStrike,
   putStrike,
@@ -309,21 +309,27 @@ async function getProviderLockedCashFromOracleAndTerms(
     process.env.PRIVATE_KEY
   )
   // Get contract instance
-  const providerNFTContract = await getContractInstance(
+  const oracleContract = await getContractInstance(
     rpcUrl,
-    providerNFTContractAddress,
-    PROVIDER_NFT_ABI,
+    oracleAddress,
+    ORACLE_ABI,
     wallet
   )
-  const taker = await providerNFTContract.taker();
-  const takerNFTContract = await getContractInstance(
-    rpcUrl,
-    taker, // need to get this address
-    TAKER_NFT_ABI,
-    wallet
+  const price = await oracleContract.currentPrice()
+  const fullCashAmount = await oracleContract.convertToQuoteAmount(
+    collateralAmount,
+    price
   )
-  const providerLocked = await takerNFTContract.calculateProviderLocked(takerLocked, putStrike, callStrike)
+  // First calculate taker's locked amount
+  const loanAmount = (fullCashAmount * BigInt(putStrike)) / BigInt(BIPS_BASE);
+  const takerLocked = fullCashAmount - loanAmount;
+
+  // Then calculate provider's locked amount
+  const putRange = BigInt(BIPS_BASE) - BigInt(putStrike);
+  const callRange = BigInt(callStrike) - BigInt(BIPS_BASE);
+  const providerLocked = (takerLocked * callRange) / putRange;
   return providerLocked
+
 }
 
 async function getCurrentPrice(rpcUrl, oracleAddress) {
