@@ -65,7 +65,7 @@ async function createOnchainOffer(
        */
     const tx = await providerContract.createOffer(
       callstrike,
-      amount,
+      amount, // @TODO: need to account for protocol fee
       ltv,
       duration,
       10n // minimum 10 wei
@@ -127,6 +127,7 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
     )
     const [providerNFTContractAddress, providerNFTId] =
       await takerContract.getPosition(takerId)
+
     // approve provider id to rolls
     const providerNFTContract = await getContractInstance(
       rpcUrl,
@@ -315,12 +316,10 @@ async function getProviderLockedCashFromOracleAndTerms(
     wallet
   )
   const price = await oracleContract.currentPrice()
-  console.log({ price, collateralAmount })
   const fullCashAmount = await oracleContract.convertToQuoteAmount(
     collateralAmount,
     price
   )
-  console.log({ fullCashAmount })
   // First calculate taker's locked amount
   const loanAmount = (fullCashAmount * BigInt(putStrike)) / BigInt(BIPS_BASE);
   const takerLocked = fullCashAmount - loanAmount;

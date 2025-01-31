@@ -40,15 +40,15 @@ async function getEscrowSettings() {
     gracePeriod: 7 * 3600 * 24,
     deadline: new Date(),
     escrowSupplierNFTContractAddress:
-      '0x528fa3cc2c35b701a870d74601e0f24bb38231d0',
+      '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
     deadlineMinutes: DEADLINE_MINUTES,
   }
 
   const defaultEscrowContracts = {
     '0xf17eb654885afece15039a9aa26f91063cc693e0:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
-      '0x528fa3cc2c35b701a870d74601e0f24bb38231d0',
+      '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
     '0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
-      '0x14a2600fa25bdd5ba922715ac2bcc897062efc5f',
+      '0x397470a7d62ed3a694718d55456ee813562978a6',
   }
 
   try {
