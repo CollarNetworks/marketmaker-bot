@@ -141,7 +141,6 @@ async function createOnchainRollOffer(proposal, rpcUrl) {
       providerNFTId
     )
     await approvalTX.wait()
-
     // Create roll offer on-chain
     const tx = await rollsContract.createOffer(
       takerId,
@@ -283,6 +282,91 @@ async function getOnchainRollOffer(rollOfferId, rollsContractAddress, rpcUrl) {
   }
 }
 
+async function previewRoll(rpcUrl, rollsContractAddress, rollOfferId, currentPrice) {
+  try {
+    const wallet = await getWalletInstance(
+      rpcUrl, process.env.PRIVATE_KEY
+    )
+    const rollsContract = await getContractInstance(
+      rpcUrl,
+      rollsContractAddress,
+      ROLLS_ABI,
+      wallet
+    )
+    const previewResult = await rollsContract.getRollOffer(rollOfferId, currentPrice)
+    return previewResult
+
+  } catch (e) {
+    console.log('error previewing roll', e);
+    throw e
+  }
+
+}
+
+async function previewSettlement(rpcUrl, takerContractAddress, positionId, currentPrice) {
+  try {
+    const wallet = await getWalletInstance(
+      rpcUrl, process.env.PRIVATE_KEY
+    )
+    const takerContract = await getContractInstance(
+      rpcUrl,
+      takerContractAddress,
+      TAKER_NFT_ABI,
+      wallet
+    )
+    const positionResult = await takerContract.getPosition(positionId);
+
+    // Create a new plain object with the same values
+    const position = {
+      providerNFT: positionResult[0],
+      providerId: positionResult[1],
+      duration: positionResult[2],
+      expiration: positionResult[3],
+      startPrice: positionResult[4],
+      putStrikePercent: positionResult[5],
+      callStrikePercent: positionResult[6],
+      takerLocked: positionResult[7],
+      providerLocked: positionResult[8],
+      settled: positionResult[9],
+      withdrawable: positionResult[10]
+    }
+    console.log({ position })
+    const result = await takerContract.previewSettlement(position, currentPrice)
+    console.log({ result })
+    return result[1]
+  } catch (e) {
+    console.log('error previewing settlement', e)
+    throw e
+  }
+}
+
+
+async function getProtocolFee(rpcUrl, providerNFTContractAddress, providerLocked, duration) {
+  try {
+    const wallet = await getWalletInstance(
+      rpcUrl, process.env.PRIVATE_KEY
+    )
+    const providerNFTContract = await getContractInstance(
+      rpcUrl,
+      providerNFTContractAddress,
+      PROVIDER_NFT_ABI,
+      wallet
+    )
+    const [fee, feeRecipient] = await providerNFTContract.protocolFee(
+      providerLocked,
+      duration
+    );
+    return {
+      fee,
+      feeRecipient
+    };
+  } catch (e) {
+    console.log('error getting protocol fee', e);
+    throw e;
+  }
+}
+
+
 async function getTakerNFTContractAddressByLoansContractAddress(
   rpcUrl,
   loansContractAddress
@@ -379,5 +463,8 @@ module.exports = {
   createOnchainEscrowOffer,
   getOnchainRollOffer,
   getCurrentPrice,
+  previewRoll,
+  previewSettlement,
+  getProtocolFee,
   cancelOnchainRollOffer
 }
