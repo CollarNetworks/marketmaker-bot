@@ -76,7 +76,7 @@ async function getProposalToCreateFromPosition(
     position.pairedPosition.putStrikePercent,
     rpcUrl
   );
-  let proposalToCreate = await getProposalTermsByPosition(position, rollsContractAddress, price)
+
   return await getProposalTermsByPosition(
     position,
     rollsContractAddress,
