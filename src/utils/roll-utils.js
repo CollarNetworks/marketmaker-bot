@@ -31,7 +31,7 @@ async function getProposalTermsByPosition(
     rollsContractAddress,
     loansContractAddress: position.loansNFT.contractAddress,
     // terms
-    rollFeeAmount: '100', // get from MM 
+    rollFeeAmount: rollFee.toString(),
     rollFeeDeltaFactorBips: 5,
     rollFeeReferencePrice: price.toString(),
     minPrice: minPrice.toString(),
