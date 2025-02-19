@@ -43,10 +43,9 @@ async function getProposalTermsByPosition(
 
 
 async function getProposalToCreateFromPosition(
-  network, position
+  networkId, position, rpcUrl
 ) {
-  const rpcUrl = network.rpcUrl
-  const { data: pair } = await getAssetPair(network.id, position.loansNFT.underlying, position.loansNFT.cashAsset)
+  const { data: pair } = await getAssetPair(networkId, position.loansNFT.underlying, position.loansNFT.cashAsset)
   const oracleContractAddress =
     position.pairedPosition.collarTakerNFT.oracle
   const rollsContractAddress = pair.rollsContractAddress
@@ -88,11 +87,10 @@ async function getProposalToCreateFromPosition(
 }
 
 
-async function handleUpdatePositionProposal(position, proposalId, networkId) {
-  const { data: network } = await getNetworkById(networkId)
+async function handleUpdatePositionProposal(position, proposalId, networkId, rpcUrl) {
 
   const proposalToCreate = await getProposalToCreateFromPosition(
-    network, position
+    networkId, position, rpcUrl
   )
   const proposalUpdate = {
     ...proposalToCreate,
@@ -100,7 +98,7 @@ async function handleUpdatePositionProposal(position, proposalId, networkId) {
     isAccepted: false,
     status: 'proposed',
   }
-  const response = await updatePositionProposal(network.id, proposalId, proposalUpdate);
+  const response = await updatePositionProposal(networkId, proposalId, proposalUpdate);
   const proposal = response.data;
   return proposal
 }

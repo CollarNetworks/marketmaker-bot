@@ -2,7 +2,6 @@ const {
   API_BASE_URL,
   LOG_IN_MESSAGE,
   PROVIDER_ADDRESS,
-  RPC_URL,
 } = require('../constants')
 const jwt = require('jsonwebtoken')
 const { getWalletInstance } = require('./ethers')
@@ -10,8 +9,8 @@ const { getWalletInstance } = require('./ethers')
 // AUTH
 //
 
-async function signAndGetTokenForAuth() {
-  const wallet = await getWalletInstance(RPC_URL, process.env.PRIVATE_KEY)
+async function signAndGetTokenForAuth(rpcUrl) {
+  const wallet = await getWalletInstance(rpcUrl, process.env.PRIVATE_KEY)
   const signature = await wallet.signMessage(LOG_IN_MESSAGE)
   const payload = {
     address: PROVIDER_ADDRESS,
@@ -23,9 +22,9 @@ async function signAndGetTokenForAuth() {
 // REQUESTS
 //
 
-async function fetchOfferRequests(status = 'open', networkId) {
+async function fetchOfferRequests(status = 'open', networkId, rpcUrl) {
   const requestURl = `${API_BASE_URL}/network/${networkId}/request?limit=1000&status=${status}`
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(requestURl, {
     method: 'GET',
     headers: {
@@ -41,7 +40,7 @@ async function fetchOfferRequests(status = 'open', networkId) {
 
 async function updateOfferRequests(requestId, body, networkId) {
   const requestURl = `${API_BASE_URL}/network/${networkId}/request/${requestId}`
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(requestURl, {
     method: 'PATCH',
     headers: {
@@ -69,9 +68,10 @@ async function createCallstrikeProposal(
   offerRequestId,
   callstrike,
   deadline,
-  networkId
+  networkId,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
 
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/request/${offerRequestId}/proposal`,
@@ -101,9 +101,10 @@ async function markProposalAsExecuted(
   networkId,
   requestId,
   proposalId,
-  onchainOfferId
+  onchainOfferId,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const url = `${API_BASE_URL}/network/${networkId}/request/${requestId}/proposal/${proposalId}`
 
   const response = await fetch(url, {
@@ -129,9 +130,10 @@ async function markProposalAsExecuted(
 async function markRollOfferProposalAsExecuted(
   proposalId,
   onchainOfferId,
-  networkId
+  networkId,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/proposal/${proposalId}`,
     {
@@ -153,9 +155,9 @@ async function markRollOfferProposalAsExecuted(
   return data
 }
 
-async function fetchRequestProposalsByProvider(requestId, provider, networkId) {
+async function fetchRequestProposalsByProvider(requestId, provider, networkId, rpcUrl) {
   const proposalURl = `${API_BASE_URL}/network/${networkId}/request/${requestId}/proposal?limit=1000&provider=${provider}`
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(proposalURl, {
     method: 'GET',
     headers: {
@@ -169,8 +171,8 @@ async function fetchRequestProposalsByProvider(requestId, provider, networkId) {
   return await response.json()
 }
 
-async function getProposalById(requestId, proposalId, networkId) {
-  const token = await signAndGetTokenForAuth()
+async function getProposalById(requestId, proposalId, networkId, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const url = `${API_BASE_URL}/network/${networkId}/request/${requestId}/proposal/${proposalId}`
   const response = await fetch(url, {
     method: 'GET',
@@ -189,8 +191,8 @@ async function getProposalById(requestId, proposalId, networkId) {
 //
 
 // Placeholder till logic is built in API
-async function fetchEscrowSettings() {
-  const token = await signAndGetTokenForAuth()
+async function fetchEscrowSettings(rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const url = `${API_BASE_URL}/user/${PROVIDER_ADDRESS}/settings/escrow`
   const response = await fetch(url, {
     method: 'GET',
@@ -203,8 +205,8 @@ async function fetchEscrowSettings() {
   return await response.json()
 }
 
-async function getEscrowProposalById(requestId, proposalId, networkId) {
-  const token = await signAndGetTokenForAuth()
+async function getEscrowProposalById(requestId, proposalId, networkId, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const url = `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal/${proposalId}`
   const response = await fetch(url, {
     method: 'GET',
@@ -228,9 +230,10 @@ async function createEscrowProposal(
   gracePeriod,
   escrowSupplierNFTContractAddress,
   deadline,
-  networkId
+  networkId,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/request/${offerRequestId}/escrow-proposal`,
     {
@@ -269,9 +272,10 @@ async function updateEscrowProposal(
   minEscrow,
   duration,
   gracePeriod,
-  deadline
+  deadline,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal/${proposalId}`,
     {
@@ -301,9 +305,9 @@ async function updateEscrowProposal(
   return await response.json()
 }
 
-async function fetchRequestEscrowProposalsByProvider(requestId, networkId) {
+async function fetchRequestEscrowProposalsByProvider(requestId, networkId, rpcUrl) {
   const proposalURl = `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal?limit=1000&provider=${PROVIDER_ADDRESS}`
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(proposalURl, {
     method: 'GET',
     headers: {
@@ -321,9 +325,10 @@ async function markEscrowProposalAsExecuted(
   networkId,
   requestId,
   proposalId,
-  onchainOfferId
+  onchainOfferId,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const url = `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal/${proposalId}`
 
   const response = await fetch(url, {
@@ -349,8 +354,8 @@ async function markEscrowProposalAsExecuted(
 // ROLLS
 //
 
-async function fetchRollOfferProposalsByProvider(providerAddress, networkId) {
-  const token = await signAndGetTokenForAuth()
+async function fetchRollOfferProposalsByProvider(providerAddress, networkId, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
 
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=1000&showExpired=true`,
@@ -371,9 +376,10 @@ async function fetchRollOfferProposalsByPosition(
   providerAddress,
   loansContractAddress,
   takerId,
-  networkId
+  networkId,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
 
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/proposal?provider=${providerAddress}&limit=2&takerId=${takerId}&loansContractAddress=${loansContractAddress}&showExpired=true`,
@@ -390,8 +396,8 @@ async function fetchRollOfferProposalsByPosition(
   return await response.json()
 }
 
-async function createPositionProposal(networkId, positionId, proposalToCreate) {
-  const token = await signAndGetTokenForAuth()
+async function createPositionProposal(networkId, positionId, proposalToCreate, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/${positionId}/proposal`,
     {
@@ -417,8 +423,8 @@ async function createPositionProposal(networkId, positionId, proposalToCreate) {
   return await response.json()
 }
 
-async function updatePositionProposal(networkId, proposalId, proposalToUpdate) {
-  const token = await signAndGetTokenForAuth()
+async function updatePositionProposal(networkId, proposalId, proposalToUpdate, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/proposal/${proposalId}`,
     {
@@ -442,8 +448,8 @@ async function updatePositionProposal(networkId, proposalId, proposalToUpdate) {
 
 // POSITION
 //
-async function getPositionsByProvider(networkId) {
-  const token = await signAndGetTokenForAuth()
+async function getPositionsByProvider(networkId, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
 
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position?provider=${PROVIDER_ADDRESS}&limit=1000`,
@@ -460,8 +466,8 @@ async function getPositionsByProvider(networkId) {
   return await response.json()
 }
 
-async function createPositionProposal(networkId, positionId, proposalToCreate) {
-  const token = await signAndGetTokenForAuth()
+async function createPositionProposal(networkId, positionId, proposalToCreate, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/${positionId}/proposal`,
     {
@@ -486,8 +492,8 @@ async function createPositionProposal(networkId, positionId, proposalToCreate) {
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
-async function getPositionById(networkId, positionId) {
-  const token = await signAndGetTokenForAuth()
+async function getPositionById(networkId, positionId, rpcUrl) {
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/position/${positionId}`,
     {
@@ -504,12 +510,23 @@ async function getPositionById(networkId, positionId) {
 }
 
 // NETWORK
-//
+
+// cache this request since it's called a lot
+let networkCache = null
+let networkCacheTime = null
+const staleTime = 1000 * 60 * 15 // 15 minutes
 
 async function getNetworkById(networkId) {
+  const now = Date.now()
+  if (networkCache && networkCacheTime && now - networkCacheTime < staleTime) {
+    return networkCache
+  }
   const response = await fetch(`${API_BASE_URL}/network/${networkId}`)
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-  return await response.json()
+  const data = await response.json()
+  networkCache = data
+  networkCacheTime = now
+  return data
 }
 
 async function getAssetPair(networkId, underlyingAddress, cashAssetAddress) {
@@ -525,12 +542,12 @@ async function getAssetPair(networkId, underlyingAddress, cashAssetAddress) {
 async function getOffersByProviderAndStatus(
   networkId,
   providerAddress,
-  status
+  status,
+  rpcUrl
 ) {
-  const token = await signAndGetTokenForAuth()
+  const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
-    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${
-      status ? `&status=${status}` : ''
+    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${status ? `&status=${status}` : ''
     }`,
     {
       method: 'GET',

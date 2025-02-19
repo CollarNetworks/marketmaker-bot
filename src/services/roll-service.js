@@ -24,6 +24,8 @@ const rollTries = {}
 async function handleAcceptedRollOfferProposals(proposal) {
   if (proposal.status === 'accepted') {
     // execute roll offer on chain with the proposal terms
+    const { data: network } = await getNetworkById(proposal.networkId)
+    const rpcUrl = network.rpcUrl
     if (new Date(proposal.deadline) > new Date()) {
       try {
         if (
@@ -34,13 +36,13 @@ async function handleAcceptedRollOfferProposals(proposal) {
           rollTries[proposal.id] = 0
           return
         }
-        const { data: network } = await getNetworkById(proposal.networkId)
-        const rpcUrl = network.rpcUrl
+
         const onchainRollOffer = await createOnchainRollOffer(proposal, rpcUrl)
         await markRollOfferProposalAsExecuted(
           proposal.id,
           onchainRollOffer.toString(),
-          network.id
+          network.id,
+          rpcUrl
         )
         console.log(
           `Executed onchain roll offer for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress}, execution ID: ${onchainRollOffer} `
@@ -56,12 +58,14 @@ async function handleAcceptedRollOfferProposals(proposal) {
         const positionId = `${proposal.loansContractAddress}-${proposal.takerId}`
         const { data: position } = await getPositionById(
           proposal.networkId,
-          positionId
+          positionId,
+          rpcUrl
         )
         await handleUpdatePositionProposal(
           position,
           proposal.id,
-          proposal.networkId
+          proposal.networkId,
+          rpcUrl
         )
         console.log(
           `Reproposed accepted position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
@@ -91,15 +95,19 @@ async function handleProposedRollOfferProposals(proposal) {
         return
       }
       try {
+        const { data: network } = await getNetworkById(proposal.networkId)
+        const rpcUrl = network.rpcUrl
         const positionId = `${proposal.loansContractAddress}-${proposal.takerId}`
         const { data: position } = await getPositionById(
           proposal.networkId,
-          positionId
+          positionId,
+          rpcUrl
         )
         await handleUpdatePositionProposal(
           position,
           proposal.id,
-          proposal.networkId
+          proposal.networkId,
+          rpcUrl
         )
         console.log(
           `Reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
@@ -153,12 +161,14 @@ async function handleOnchainRollOfferProposals(proposal) {
 
         const { data: position } = await getPositionById(
           proposal.networkId,
-          positionId
+          positionId,
+          rpcUrl
         )
         await handleUpdatePositionProposal(
           position,
           proposal.id,
-          proposal.networkId
+          proposal.networkId,
+          rpcUrl
         )
         console.log(
           `Cancelled onchain and reproposed position proposal id ${proposal.id} for position ${proposal.takerId} on loans contract: ${proposal.loansContractAddress} `
@@ -179,9 +189,12 @@ async function processRollOfferProposals(plugins = []) {
   }
 
   try {
+    const { data: network } = await getNetworkById(CHAIN_ID)
+    const rpcUrl = network.rpcUrl
     const response = await fetchRollOfferProposalsByProvider(
       PROVIDER_ADDRESS,
-      CHAIN_ID
+      CHAIN_ID,
+      rpcUrl
     )
     const proposals = response.data
     if (proposals?.length === 0) {
@@ -201,22 +214,25 @@ async function generateRollOfferProposal(position) {
   if (position.status === 'Active') {
     // create a position proposal on the API
     try {
+      const { data: network } = await getNetworkById(CHAIN_ID)
+      const rpcUrl = network.rpcUrl
       const { data: existingProposals } =
         await fetchRollOfferProposalsByPosition(
           PROVIDER_ADDRESS,
           position.loansNFT.contractAddress,
           position.loanId,
-          CHAIN_ID
+          network.id,
+          rpcUrl
         )
       if (existingProposals?.length === 0) {
-        const { data: network } = await getNetworkById(CHAIN_ID)
         const proposalToCreate = await getProposalToCreateFromPosition(
-          network, position
+          network.id, position, rpcUrl
         )
         const response = await createPositionProposal(
           network.id,
           position.id,
-          proposalToCreate
+          proposalToCreate,
+          rpcUrl
         )
         const proposal = response.data
         console.log(

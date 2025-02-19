@@ -12,7 +12,7 @@ async function processOpenPositions(plugins = []) {
     const positions = response.data
     // loop through onchain positions and create a positionProposal on the API (roll proposal) if the position characteristics match determined values
     if (positions.length === 0) {
-      console.log(`No ${status} offer requests found`)
+      console.log(`No open positions found`)
       return
     }
     for (const position of positions) {
