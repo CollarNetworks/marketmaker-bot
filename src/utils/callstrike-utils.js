@@ -101,16 +101,17 @@ async function getCallstrikeSettings() {
   }
 }
 
-async function getAcceptedProposalById(requestId, proposalId, networkId) {
-  const response = await getProposalById(requestId, proposalId, networkId)
+async function getAcceptedProposalById(requestId, proposalId, networkId, rpcUrl) {
+  const response = await getProposalById(requestId, proposalId, networkId, rpcUrl)
   return response.data
 }
 
-async function getProposalsByProvider(offer, networkId) {
+async function getProposalsByProvider(offer, networkId, rpcUrl) {
   const response = await fetchRequestProposalsByProvider(
     offer.id,
     PROVIDER_ADDRESS,
-    networkId
+    networkId,
+    rpcUrl
   )
   return response.data
 }

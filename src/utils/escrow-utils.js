@@ -21,7 +21,7 @@ async function executeOnchainEscrowOffer(escrowProposal, amount, rpcUrl) {
   return offerId
 }
 
-async function getEscrowSettings() {
+async function getEscrowSettings(rpcUrl) {
   const now = Date.now()
 
   // Check if cache is valid (exists and less than 15 minutes old)
@@ -52,7 +52,7 @@ async function getEscrowSettings() {
   }
 
   try {
-    const response = await fetchEscrowSettings()
+    const response = await fetchEscrowSettings(rpcUrl)
     const settings = response.data
 
     if (settings) {
@@ -89,8 +89,8 @@ async function getEscrowSettings() {
   }
 }
 
-async function getEscrowTermsBySettings(offer) {
-  const allSettings = await getEscrowSettings()
+async function getEscrowTermsBySettings(offer, rpcUrl) {
+  const allSettings = await getEscrowSettings(rpcUrl)
   const settings =
     allSettings[`${offer.collateralAsset}:${offer.cashAsset}`] ||
     allSettings.default

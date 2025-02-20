@@ -20,10 +20,13 @@ const tries = {}
 async function generateCallstrikeProposal(offer) {
   if (!PROVIDER_BOT_ACTIVE) return
   try {
-    const terms = await getCallstrikeTermsBySettings(offer) // here's where the configurable callback logic would come in
+    const { data: network } = await getNetworkById(offer.networkId)
+    const rpcUrl = network.rpcUrl
+    const terms = await getCallstrikeTermsBySettings(offer, rpcUrl) // here's where the configurable callback logic would come in
     const providerProposals = await getProposalsByProvider(
       offer,
-      offer.networkId
+      offer.networkId,
+      rpcUrl
     )
     if (
       providerProposals.length > 0 ||
@@ -37,7 +40,8 @@ async function generateCallstrikeProposal(offer) {
         offer.id,
         terms.callstrike,
         terms.deadline,
-        offer.networkId
+        offer.networkId,
+        rpcUrl
       )
       const proposal = response.data
       console.log(
@@ -56,10 +60,13 @@ async function generateCallstrikeProposal(offer) {
 async function executeCallstrikeProposal(offer) {
   if (!PROVIDER_BOT_ACTIVE) return
   try {
+    const { data: network } = await getNetworkById(offer.networkId)
+    const rpcUrl = network.rpcUrl
     const acceptedProposal = await getAcceptedProposalById(
       offer.id,
       offer.acceptedProposalId,
-      offer.networkId
+      offer.networkId,
+      rpcUrl
     )
     if (offer.ltv < 100) {
       offer.ltv = offer.ltv * 100
@@ -81,8 +88,7 @@ async function executeCallstrikeProposal(offer) {
       }
       const providerNFTAddress = acceptedProposal.providerNftContractAddress
       const oracleAddress = acceptedProposal.oracleContractAddress
-      const { data: network } = await getNetworkById(acceptedProposal.networkId)
-      const rpcUrl = network.rpcUrl
+
       const onchainId = await executeOnchainOffer(
         acceptedProposal.callstrike,
         offer.ltv,
@@ -97,7 +103,8 @@ async function executeCallstrikeProposal(offer) {
         acceptedProposal.networkId,
         offer.id,
         acceptedProposal.id,
-        Number(onchainId)
+        Number(onchainId),
+        rpcUrl
       )
       console.log(
         `Executed onchain offer for request ${offer.id}, execution ID: ${onchainId}`

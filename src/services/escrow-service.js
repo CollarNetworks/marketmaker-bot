@@ -21,10 +21,13 @@ const tries = {}
 async function generateEscrowProposal(offer) {
   if (!LENDER_BOT_ACTIVE) return
   try {
-    const terms = await getEscrowTermsBySettings(offer) // here's where the configurable callback logic would come in
+    const { data: network } = await getNetworkById(offer.networkId)
+    const rpcUrl = network.rpcUrl
+    const terms = await getEscrowTermsBySettings(offer, rpcUrl) // here's where the configurable callback logic would come in
     const response = await fetchRequestEscrowProposalsByProvider(
       offer.id,
-      offer.networkId
+      offer.networkId,
+      rpcUrl
     )
     const escrowProposals = response.data
     if (
@@ -44,7 +47,8 @@ async function generateEscrowProposal(offer) {
         terms.gracePeriod,
         terms.escrowSupplierNFTContractAddress,
         terms.deadline,
-        offer.networkId
+        offer.networkId,
+        rpcUrl
       )
       const proposal = response.data
       console.log(
@@ -63,7 +67,9 @@ async function generateEscrowProposal(offer) {
 async function reproposeEscrowProposal(offer) {
   if (!LENDER_BOT_ACTIVE) return
   try {
-    const terms = await getEscrowTermsBySettings(offer) // here's where the configurable callback logic would come in
+    const { data: network } = await getNetworkById(offer.networkId)
+    const rpcUrl = network.rpcUrl
+    const terms = await getEscrowTermsBySettings(offer, rpcUrl) // here's where the configurable callback logic would come in
     const response = await updateEscrowProposal(
       offer.id,
       offer.acceptedEscrowProposalId,
@@ -73,7 +79,8 @@ async function reproposeEscrowProposal(offer) {
       terms.minEscrow,
       offer.duration,
       terms.gracePeriod,
-      terms.deadline
+      terms.deadline,
+      rpcUrl
     )
     const proposal = response.data
     console.log(
@@ -92,10 +99,13 @@ async function executeEscrowProposal(offer) {
   if (!offer.acceptedEscrowProposalId) return
 
   try {
+    const { data: network } = await getNetworkById(offer.networkId)
+    const rpcUrl = network.rpcUrl
     const { data: acceptedProposal } = await getEscrowProposalById(
       offer.id,
       offer.acceptedEscrowProposalId,
-      offer.networkId
+      offer.networkId,
+      rpcUrl
     )
 
     if (
@@ -117,8 +127,6 @@ async function executeEscrowProposal(offer) {
         return
       }
 
-      const { data: network } = await getNetworkById(acceptedProposal.networkId)
-      const rpcUrl = network.rpcUrl
       const onchainId = await executeOnchainEscrowOffer(
         acceptedProposal,
         offer.collateralAmount,
@@ -129,7 +137,8 @@ async function executeEscrowProposal(offer) {
         acceptedProposal.networkId,
         offer.id,
         acceptedProposal.id,
-        Number(onchainId)
+        Number(onchainId),
+        rpcUrl
       )
       console.log(
         `Executed onchain offer for request ${offer.id}, execution ID: ${onchainId}`

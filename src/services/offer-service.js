@@ -12,15 +12,16 @@ async function processOnchainOffers(plugins = []) {
     return
   }
   try {
+    const { data: network } = await getNetworkById(CHAIN_ID)
+    const rpcUrl = network.rpcUrl
     // get all offers from provider
     const { data: offers } = await getOffersByProviderAndStatus(
       CHAIN_ID,
       PROVIDER_ADDRESS,
-      'Active'
+      'Active',
+      rpcUrl
     )
     // loop through offers and cancel them
-    const { data: network } = await getNetworkById(CHAIN_ID)
-    const rpcUrl = network.rpcUrl
     for (const offer of offers) {
       for (const plugin of plugins) {
         await plugin(offer, rpcUrl)
