@@ -40,7 +40,8 @@ async function getEscrowSettings(rpcUrl) {
     gracePeriod: 7 * 3600 * 24,
     deadline: new Date(),
     escrowSupplierNFTContractAddress:
-      '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
+      // '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35', // arbi sepolia 
+      '0xc76a1bc79B876F8068fa695600c7A1A3E2f6545b', // base sepolia
     deadlineMinutes: DEADLINE_MINUTES,
   }
 
@@ -49,6 +50,12 @@ async function getEscrowSettings(rpcUrl) {
       '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
     '0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
       '0x397470a7d62ed3a694718d55456ee813562978a6',
+    '0xA703Bb2faf4A977E9867DcbfC4c141c0a50F3Aec:0x17F5E1f30871D487612331d674765F610324a532':
+      '0xc76a1bc79B876F8068fa695600c7A1A3E2f6545b',
+    '0x25361aD7C93F46e71434940d705815bD38BB0fa3:0x17F5E1f30871D487612331d674765F610324a532':
+      '0x924E1c13B28f5C083Fa7a7972a14fF3A62011985',
+
+
   }
 
   try {
