@@ -1,6 +1,6 @@
 const { fetchEscrowSettings } = require('../adapters/collarAPI')
 const { createOnchainEscrowOffer } = require('../adapters/collarProtocol')
-const { DEADLINE_MINUTES, CACHE_REFRESH_INTERVAL } = require('../constants')
+const { DEADLINE_MINUTES, CACHE_REFRESH_INTERVAL, CHAIN_ID } = require('../constants')
 
 let settingsCache = null
 let lastCacheTime = null
@@ -33,23 +33,40 @@ async function getEscrowSettings(rpcUrl) {
     return settingsCache
   }
 
+  const defaultEscrowContracts = {
+    "84532": {
+      escrowSupplierNFTContractAddress: '0xc76a1bc79B876F8068fa695600c7A1A3E2f6545b',
+      '0xA703Bb2faf4A977E9867DcbfC4c141c0a50F3Aec:0x17F5E1f30871D487612331d674765F610324a532':
+        '0xc76a1bc79B876F8068fa695600c7A1A3E2f6545b',
+      '0x25361aD7C93F46e71434940d705815bD38BB0fa3:0x17F5E1f30871D487612331d674765F610324a532':
+        '0x924E1c13B28f5C083Fa7a7972a14fF3A62011985',
+    },
+    "421614": {
+      escrowSupplierNFTContractAddress: '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
+      '0xf17eb654885afece15039a9aa26f91063cc693e0:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
+        '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
+      '0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
+        '0x397470a7d62ed3a694718d55456ee813562978a6',
+    },
+    "8453": {
+      escrowSupplierNFTContractAddress: '0x8d1081e8A6E5c29Ec3E6bDFE4D09a622ef22c369',// weth
+      "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": "0xA6b0D40e218E29BA626eAD3da4E8F146027A802D",// cbBTC
+      "0x4200000000000000000000000000000000000006:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": "0x8d1081e8A6E5c29Ec3E6bDFE4D09a622ef22c369" // wETH
+    }
+  }
+
   const defaultSettings = {
     interestAPR: 500,
     lateFeeAPR: 5000,
     minEscrow: 1,
     gracePeriod: 7 * 3600 * 24,
     deadline: new Date(),
-    escrowSupplierNFTContractAddress:
-      '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
+    escrowSupplierNFTContractAddress: defaultEscrowContracts[CHAIN_ID].escrowSupplierNFTContractAddress,
     deadlineMinutes: DEADLINE_MINUTES,
   }
 
-  const defaultEscrowContracts = {
-    '0xf17eb654885afece15039a9aa26f91063cc693e0:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
-      '0x4ffe5473cac9313bd89fe1d34ea207c0a2dd5d35',
-    '0x19d87c960265c229d4b1429df6f0c7d18f0611f3:0x69fc9d4d59843c6e55f00b5f66b263c963214c53':
-      '0x397470a7d62ed3a694718d55456ee813562978a6',
-  }
+
+
 
   try {
     const response = await fetchEscrowSettings(rpcUrl)
@@ -58,7 +75,7 @@ async function getEscrowSettings(rpcUrl) {
     if (settings) {
       const settingsObj = settings.reduce((prev, curr) => {
         const assetPair = `${curr.collateralAsset}:${curr.cashAsset}`
-        const contractAddress = defaultEscrowContracts[assetPair]
+        const contractAddress = defaultEscrowContracts[CHAIN_ID][assetPair]
         console.log({ contractAddress })
         prev[assetPair] = {
           ...curr,
