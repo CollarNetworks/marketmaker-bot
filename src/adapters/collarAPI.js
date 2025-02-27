@@ -231,8 +231,8 @@ async function createEscrowProposal(
   interestAPR,
   lateFeeAPR,
   minEscrow,
-  duration,
   gracePeriod,
+  deadline,
   networkId,
   rpcUrl
 ) {
@@ -251,7 +251,7 @@ async function createEscrowProposal(
         lateFeeAPR,
         minEscrow,
         gracePeriod,
-        deadline,
+        deadline
       }),
     }
   )
@@ -266,6 +266,7 @@ async function updateEscrowProposal(
   proposalId,
   networkId,
   interestAPR,
+
   lateFeeAPR,
   minEscrow,
   duration,
@@ -568,8 +569,7 @@ async function getOffersByProviderAndStatus(
 ) {
   const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(
-    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${
-      status ? `&status=${status}` : ''
+    `${API_BASE_URL}/network/${networkId}/offer?provider=${providerAddress}&limit=1000${status ? `&status=${status}` : ''
     }`,
     {
       method: 'GET',
