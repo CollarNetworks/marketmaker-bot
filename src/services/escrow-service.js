@@ -43,9 +43,7 @@ async function generateEscrowProposal(offer) {
         terms.interestAPR,
         terms.lateFeeAPR,
         terms.minEscrow,
-        offer.duration,
         terms.gracePeriod,
-        terms.escrowSupplierNFTContractAddress,
         terms.deadline,
         offer.networkId,
         rpcUrl
