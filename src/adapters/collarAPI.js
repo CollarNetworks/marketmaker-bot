@@ -308,7 +308,7 @@ async function fetchRequestEscrowProposalsByProvider(
   networkId,
   rpcUrl
 ) {
-  const proposalURl = `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal?limit=1000&provider=${PROVIDER_ADDRESS}`
+  const proposalURl = `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal?limit=1000&supplier=${PROVIDER_ADDRESS}`
   const token = await signAndGetTokenForAuth(rpcUrl)
   const response = await fetch(proposalURl, {
     method: 'GET',
