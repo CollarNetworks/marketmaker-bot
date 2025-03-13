@@ -28,6 +28,7 @@ async function generateCallstrikeProposal(offer) {
       offer.networkId,
       rpcUrl
     )
+
     if (
       providerProposals.length > 0 ||
       (tries[offer.id] !== undefined && tries[offer.id] >= MAX_RETRIES)
@@ -35,6 +36,7 @@ async function generateCallstrikeProposal(offer) {
       // skip these as they failed twice already
       return
     }
+
     try {
       const response = await createCallstrikeProposal(
         offer.id,
@@ -86,7 +88,7 @@ async function executeCallstrikeProposal(offer) {
       ) {
         return
       }
-      const providerNFTAddress = acceptedProposal.providerNftContractAddress
+      const providerNFTAddress = acceptedProposal.providerNFTContractAddress
       const oracleAddress = acceptedProposal.oracleContractAddress
 
       const onchainId = await executeOnchainOffer(

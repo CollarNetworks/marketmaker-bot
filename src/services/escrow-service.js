@@ -73,6 +73,7 @@ async function reproposeEscrowProposal(offer) {
       offer.acceptedEscrowProposalId,
       offer.networkId,
       terms.interestAPR,
+      terms.escrowSupplierNFTContractAddress,
       terms.lateFeeAPR,
       terms.minEscrow,
       offer.duration,
@@ -105,6 +106,14 @@ async function executeEscrowProposal(offer) {
       offer.networkId,
       rpcUrl
     )
+
+    if (
+      new Date(acceptedProposal.deadline) < new Date() &&
+      acceptedProposal.status === 'accepted'
+    ) {
+      await reproposeEscrowProposal(offer)
+      return
+    }
 
     if (
       acceptedProposal &&
