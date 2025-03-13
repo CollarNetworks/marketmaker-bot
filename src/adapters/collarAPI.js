@@ -249,7 +249,7 @@ async function createEscrowProposal(
       body: JSON.stringify({
         interestAPR,
         lateFeeAPR,
-        minEscrow,
+        minEscrow: minEscrow.toString(),
         gracePeriod,
         deadline
       }),
@@ -266,7 +266,7 @@ async function updateEscrowProposal(
   proposalId,
   networkId,
   interestAPR,
-
+  escrowSupplierNFTContractAddress,
   lateFeeAPR,
   minEscrow,
   duration,
@@ -278,7 +278,7 @@ async function updateEscrowProposal(
   const response = await fetch(
     `${API_BASE_URL}/network/${networkId}/request/${requestId}/escrow-proposal/${proposalId}`,
     {
-      method: 'POST',
+      method: 'PATCH',
       headers: {
         Authorization: `MMBOTBearer ${token}`,
         Environment: process.env.API_ENVIRONMENT,
@@ -288,13 +288,13 @@ async function updateEscrowProposal(
         address: PROVIDER_ADDRESS,
         interestAPR,
         lateFeeAPR,
-        minEscrow,
+        minEscrow: minEscrow.toString(),
         duration,
         gracePeriod,
         deadline,
         escrowSupplierNFTContractAddress,
-        offerRequestId,
         status: 'proposed',
+        offerRequestId: requestId,
       }),
     }
   )
@@ -375,6 +375,9 @@ async function fetchRollOfferProposalsByProvider(
       },
     }
   )
+  if (response.status === 404) {
+    return { data: [] }
+  }
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
@@ -399,6 +402,9 @@ async function fetchRollOfferProposalsByPosition(
       },
     }
   )
+  if (response.status === 404) {
+    return { data: [] }
+  }
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
   return await response.json()
 }
